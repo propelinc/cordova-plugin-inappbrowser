@@ -120,12 +120,14 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String FOOTER_COLOR = "footercolor";
     private static final String BEFORELOAD = "beforeload";
     private static final String FULLSCREEN = "fullscreen";
+    private static final String CUSTOM_MESSAGE_TEXT = "custommessagetext";
 
-    private static final List customizableOptions = Arrays.asList(CLOSE_BUTTON_CAPTION, TOOLBAR_COLOR, NAVIGATION_COLOR, CLOSE_BUTTON_COLOR, FOOTER_COLOR);
+    private static final List customizableOptions = Arrays.asList(CLOSE_BUTTON_CAPTION, TOOLBAR_COLOR, NAVIGATION_COLOR, CLOSE_BUTTON_COLOR, FOOTER_COLOR, CUSTOM_MESSAGE_TEXT);
 
     private InAppBrowserDialog dialog;
     private WebView inAppWebView;
     private EditText edittext;
+    private TextView messageText;
     private CallbackContext callbackContext;
     private boolean showLocationBar = true;
     private boolean showZoomControls = true;
@@ -153,6 +155,7 @@ public class InAppBrowser extends CordovaPlugin {
     private boolean fullscreen = true;
     private String[] allowedSchemes;
     private InAppBrowserClient currentClient;
+    private String customMessageText = "";
 
     /**
      * Executes the request and returns PluginResult.
@@ -333,6 +336,18 @@ public class InAppBrowser extends CordovaPlugin {
                     if (dialog != null && !cordova.getActivity().isFinishing()) {
                         dialog.hide();
                     }
+                }
+            });
+            PluginResult pluginResult = new PluginResult(PluginResult.Status.OK);
+            pluginResult.setKeepCallback(true);
+            this.callbackContext.sendPluginResult(pluginResult);
+        }
+        else if (action.equals("setCustomMessage")) {
+            final String newMessage = args.getString(0);
+            this.cordova.getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    messageText.setText(newMessage);
                 }
             });
             PluginResult pluginResult = new PluginResult(PluginResult.Status.OK);
@@ -721,6 +736,10 @@ public class InAppBrowser extends CordovaPlugin {
             if (fullscreenSet != null) {
                 fullscreen = fullscreenSet.equals("yes") ? true : false;
             }
+            String customMessageTextSet = features.get(CUSTOM_MESSAGE_TEXT);
+            if (customMessageTextSet != null) {
+                customMessageText = customMessageTextSet;
+            }
         }
 
         final CordovaWebView thatWebView = this.webView;
@@ -1074,8 +1093,8 @@ public class InAppBrowser extends CordovaPlugin {
                 messageBanner.setHorizontalGravity(Gravity.LEFT);
                 messageBanner.setVerticalGravity(Gravity.TOP);
 
-                TextView messageText = new TextView(cordova.getActivity());
-                messageText.setText("This is a custom message!");
+                messageText = new TextView(cordova.getActivity());
+                messageText.setText(customMessageText);
                 messageText.setTextSize(16);
                 messageText.setTextColor(android.graphics.Color.BLACK); // set this based on a config
                 messageText.setGravity(Gravity.LEFT);

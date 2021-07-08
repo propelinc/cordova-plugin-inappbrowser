@@ -89,6 +89,10 @@
             } else {
                 throw new Error('insertCSS requires exactly one of code or file to be specified');
             }
+        },
+
+        setCustomMessage: function (message, cb) {
+            exec(cb, null, 'InAppBrowser', 'setCustomMessage', [message, !!cb]);
         }
     };
 
