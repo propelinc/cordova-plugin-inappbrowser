@@ -45,6 +45,10 @@
 @property (nonatomic, assign) BOOL disallowoverscroll;
 @property (nonatomic, copy) NSString* beforeload;
 
+// Propel customized properties
+@property (nonatomic, assign) BOOL custommessage;
+@property (nonatomic, copy) NSString* custommessagetext;
+
 + (CDVInAppBrowserOptions*)parseOptions:(NSString*)options;
 
 @end

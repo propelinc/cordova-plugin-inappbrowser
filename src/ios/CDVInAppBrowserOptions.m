@@ -45,6 +45,9 @@
         self.toolbarcolor = nil;
         self.toolbartranslucent = YES;
         self.beforeload = @"";
+
+        self.custommessage = NO;
+        self.custommessagetext = @"";
     }
 
     return self;

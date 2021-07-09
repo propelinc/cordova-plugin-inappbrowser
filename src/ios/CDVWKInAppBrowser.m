@@ -36,6 +36,7 @@
 
 #define    IAB_BRIDGE_NAME @"cordova_iab"
 
+#define    CUSTOM_MESSAGE_HEIGHT 44.0
 #define    TOOLBAR_HEIGHT 44.0
 #define    LOCATIONBAR_HEIGHT 21.0
 #define    FOOTER_HEIGHT ((TOOLBAR_HEIGHT) + (LOCATIONBAR_HEIGHT))
@@ -208,12 +209,18 @@ static CDVWKInAppBrowser* instance = nil;
         }
     }
     
+    [self.inAppBrowserViewController showCustomMessage:browserOptions.custommessage];
     [self.inAppBrowserViewController showLocationBar:browserOptions.location];
     [self.inAppBrowserViewController showToolBar:browserOptions.toolbar :browserOptions.toolbarposition];
     if (browserOptions.closebuttoncaption != nil || browserOptions.closebuttoncolor != nil) {
         int closeButtonIndex = browserOptions.lefttoright ? (browserOptions.hidenavigationbuttons ? 1 : 4) : 0;
         [self.inAppBrowserViewController setCloseButtonTitle:browserOptions.closebuttoncaption :browserOptions.closebuttoncolor :closeButtonIndex];
     }
+
+    if (browserOptions.custommessagetext != @"") {
+        [self.inAppBrowserViewController setCustomMessageLabelText:browserOptions.custommessagetext];
+    }
+
     // Set Presentation Style
     UIModalPresentationStyle presentationStyle = UIModalPresentationFullScreen; // default
     if (browserOptions.presentationstyle != nil) {
@@ -475,6 +482,11 @@ static CDVWKInAppBrowser* instance = nil;
     [self injectDeferredObject:[command argumentAtIndex:0] withWrapper:jsWrapper];
 }
 
+- (void)setCustomMessage:(CDVInvokedUrlCommand*)command
+{
+    [self.inAppBrowserViewController setCustomMessageLabelText:[command argumentAtIndex:0]];
+}
+
 - (BOOL)isValidCallbackId:(NSString *)callbackId
 {
     NSError *err = nil;
@@ -728,6 +740,7 @@ BOOL isExiting = FALSE;
     CGRect webViewBounds = self.view.bounds;
     BOOL toolbarIsAtBottom = ![_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
     webViewBounds.size.height -= _browserOptions.location ? FOOTER_HEIGHT : TOOLBAR_HEIGHT;
+    webViewBounds.size.height -= _browserOptions.custommessage ? CUSTOM_MESSAGE_HEIGHT : 0;
     WKUserContentController* userContentController = [[WKUserContentController alloc] init];
     
     WKWebViewConfiguration* configuration = [[WKWebViewConfiguration alloc] init];
@@ -824,8 +837,38 @@ BOOL isExiting = FALSE;
     
     UIBarButtonItem* fixedSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
     fixedSpaceButton.width = 20;
+
+    CGRect customMessageFrame = CGRectMake(0.0, 0.0, self.view.bounds.size.width, CUSTOM_MESSAGE_HEIGHT);
+    self.customMessageLabel = [[UILabel alloc] initWithFrame:customMessageFrame];
+    self.customMessageLabel.alpha = 1.000;
+    self.customMessageLabel.autoresizesSubviews = YES;
+    self.customMessageLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    self.customMessageLabel.backgroundColor = [self colorFromHexString:_browserOptions.toolbarcolor];
+    self.customMessageLabel.clearsContextBeforeDrawing = YES;
+    self.customMessageLabel.clipsToBounds = YES;
+    self.customMessageLabel.contentMode = UIViewContentModeScaleToFill;
+    self.customMessageLabel.enabled = YES;
+    self.customMessageLabel.hidden = NO;
+    self.customMessageLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+
+    if ([self.customMessageLabel respondsToSelector:NSSelectorFromString(@"setMinimumScaleFactor:")]) {
+        [self.customMessageLabel setValue:@(10.0/[UIFont labelFontSize]) forKey:@"minimumScaleFactor"];
+    } else if ([self.customMessageLabel respondsToSelector:NSSelectorFromString(@"setMinimumFontSize:")]) {
+        [self.customMessageLabel setValue:@(10.0) forKey:@"minimumFontSize"];
+    }
+
+    self.customMessageLabel.multipleTouchEnabled = NO;
+    self.customMessageLabel.numberOfLines = 1;
+    self.customMessageLabel.opaque = YES;
+    self.customMessageLabel.shadowOffset = CGSizeMake(0.0, -1.0);
+    // self.customMessageLabel.text = @"";  // this will get set later
+    self.customMessageLabel.textAlignment = NSTextAlignmentLeft;
+
+    // TODO: Make text color configurable.
+    self.customMessageLabel.textColor = [UIColor colorWithWhite:1.000 alpha:1.000];
+    self.customMessageLabel.userInteractionEnabled = NO;
     
-    float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT : 0.0;
+    float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT : CUSTOM_MESSAGE_HEIGHT;
     CGRect toolbarFrame = CGRectMake(0.0, toolbarY, self.view.bounds.size.width, TOOLBAR_HEIGHT);
     
     self.toolbar = [[UIToolbar alloc] initWithFrame:toolbarFrame];
@@ -855,7 +898,8 @@ BOOL isExiting = FALSE;
     self.addressLabel.alpha = 1.000;
     self.addressLabel.autoresizesSubviews = YES;
     self.addressLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin;
-    self.addressLabel.backgroundColor = [UIColor clearColor];
+    // deal with transparent url bar issued based on https://github.com/apache/cordova-plugin-inappbrowser/issues/870
+    self.addressLabel.backgroundColor = [self colorFromHexString:_browserOptions.toolbarcolor];
     self.addressLabel.baselineAdjustment = UIBaselineAdjustmentAlignCenters;
     self.addressLabel.clearsContextBeforeDrawing = YES;
     self.addressLabel.clipsToBounds = YES;
@@ -909,6 +953,7 @@ BOOL isExiting = FALSE;
     }
     
     self.view.backgroundColor = [UIColor clearColor];
+    [self.view addSubview:self.customMessageLabel];
     [self.view addSubview:self.toolbar];
     [self.view addSubview:self.addressLabel];
     [self.view addSubview:self.spinner];
@@ -945,6 +990,7 @@ BOOL isExiting = FALSE;
     CGRect locationbarFrame = self.addressLabel.frame;
     
     BOOL toolbarVisible = !self.toolbar.hidden;
+    BOOL customMessageVisible = !self.customMessageLabel.hidden;
     
     // prevent double show/hide
     if (show == !(self.addressLabel.hidden)) {
@@ -960,6 +1006,7 @@ BOOL isExiting = FALSE;
             
             CGRect webViewBounds = self.view.bounds;
             webViewBounds.size.height -= FOOTER_HEIGHT;
+            webViewBounds.size.height -= customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
             [self setWebViewFrame:webViewBounds];
             
             locationbarFrame.origin.y = webViewBounds.size.height;
@@ -969,6 +1016,7 @@ BOOL isExiting = FALSE;
             
             CGRect webViewBounds = self.view.bounds;
             webViewBounds.size.height -= LOCATIONBAR_HEIGHT;
+            webViewBounds.size.height -= customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
             [self setWebViewFrame:webViewBounds];
             
             locationbarFrame.origin.y = webViewBounds.size.height;
@@ -983,10 +1031,12 @@ BOOL isExiting = FALSE;
             // webView take up whole height less toolBar height
             CGRect webViewBounds = self.view.bounds;
             webViewBounds.size.height -= TOOLBAR_HEIGHT;
+            webViewBounds.size.height -= customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
             [self setWebViewFrame:webViewBounds];
         } else {
-            // no toolBar, expand webView to screen dimensions
-            [self setWebViewFrame:self.view.bounds];
+            CGRect webViewBounds = self.view.bounds;
+            webViewBounds.size.height -= customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
+            [self setWebViewFrame:webViewBounds];
         }
     }
 }
@@ -995,8 +1045,9 @@ BOOL isExiting = FALSE;
 {
     CGRect toolbarFrame = self.toolbar.frame;
     CGRect locationbarFrame = self.addressLabel.frame;
-    
+
     BOOL locationbarVisible = !self.addressLabel.hidden;
+    BOOL customMessageVisible = !self.customMessageLabel.hidden;
     
     // prevent double show/hide
     if (show == !(self.toolbar.hidden)) {
@@ -1011,6 +1062,7 @@ BOOL isExiting = FALSE;
             // locationBar at the bottom, move locationBar up
             // put toolBar at the bottom
             webViewBounds.size.height -= FOOTER_HEIGHT;
+            webViewBounds.size.height -= customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
             locationbarFrame.origin.y = webViewBounds.size.height;
             self.addressLabel.frame = locationbarFrame;
             self.toolbar.frame = toolbarFrame;
@@ -1018,15 +1070,18 @@ BOOL isExiting = FALSE;
             // no locationBar, so put toolBar at the bottom
             CGRect webViewBounds = self.view.bounds;
             webViewBounds.size.height -= TOOLBAR_HEIGHT;
+            webViewBounds.size.height -= customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
             self.toolbar.frame = toolbarFrame;
         }
         
         if ([toolbarPosition isEqualToString:kInAppBrowserToolbarBarPositionTop]) {
-            toolbarFrame.origin.y = 0;
+            toolbarFrame.origin.y = customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
             webViewBounds.origin.y += toolbarFrame.size.height;
+            webViewBounds.origin.y += customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
             [self setWebViewFrame:webViewBounds];
         } else {
             toolbarFrame.origin.y = (webViewBounds.size.height + LOCATIONBAR_HEIGHT);
+            toolbarFrame.origin.y += customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
         }
         [self setWebViewFrame:webViewBounds];
         
@@ -1040,16 +1095,47 @@ BOOL isExiting = FALSE;
             // webView take up whole height less locationBar height
             CGRect webViewBounds = self.view.bounds;
             webViewBounds.size.height -= LOCATIONBAR_HEIGHT;
+            webViewBounds.size.height -= customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
             [self setWebViewFrame:webViewBounds];
             
             // move locationBar down
             locationbarFrame.origin.y = webViewBounds.size.height;
+            locationbarFrame.origin.y += customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
             self.addressLabel.frame = locationbarFrame;
         } else {
-            // no locationBar, expand webView to screen dimensions
-            [self setWebViewFrame:self.view.bounds];
+            CGRect webViewBounds = self.view.bounds;
+            webViewBounds.size.height -= customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
+            [self setWebViewFrame:webViewBounds];
         }
     }
+}
+
+// Note: This method is incomplete, but should be OK as long as the custom message hidden state
+// is not changed after it is first created.
+- (void)showCustomMessage:(BOOL)show
+{
+    CGRect customMessageLabelFrame = self.customMessageLabel.frame;
+    CGRect toolbarFrame = self.toolbar.frame;
+    CGRect locationbarFrame = self.addressLabel.frame;
+    CGRect webViewBounds = self.view.bounds;
+
+    BOOL locationbarVisible = !self.addressLabel.hidden;
+    
+    // prevent double show/hide
+    if (show == !(self.customMessageLabel.hidden)) {
+        return;
+    }
+    
+    if (show) {
+        self.customMessageLabel.hidden = NO;
+    } else {
+        self.customMessageLabel.hidden = YES;
+    }
+}
+
+- (void)setCustomMessageLabelText:(NSString*)message
+{
+    self.customMessageLabel.text = message;
 }
 
 - (void)viewDidLoad
@@ -1149,7 +1235,12 @@ BOOL isExiting = FALSE;
     if ((_browserOptions.toolbar) && ([_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop])) {
         // if we have to display the toolbar on top of the web view, we need to account for its height
         viewBounds.origin.y += TOOLBAR_HEIGHT;
-        self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
+        self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, _browserOptions ? CUSTOM_MESSAGE_HEIGHT + statusBarHeight : statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
+    }
+
+    if (_browserOptions.custommessage) {
+        viewBounds.origin.y += CUSTOM_MESSAGE_HEIGHT;
+        self.customMessageLabel.frame = CGRectMake(self.customMessageLabel.frame.origin.x, statusBarHeight, self.customMessageLabel.frame.size.width, self.customMessageLabel.frame.size.height);
     }
     
     self.webView.frame = viewBounds;
