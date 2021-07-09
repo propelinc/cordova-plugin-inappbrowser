@@ -36,7 +36,7 @@
 
 #define    IAB_BRIDGE_NAME @"cordova_iab"
 
-#define    CUSTOM_MESSAGE_HEIGHT 44.0
+#define    CUSTOM_MESSAGE_HEIGHT 40.0
 #define    TOOLBAR_HEIGHT 44.0
 #define    LOCATIONBAR_HEIGHT 21.0
 #define    FOOTER_HEIGHT ((TOOLBAR_HEIGHT) + (LOCATIONBAR_HEIGHT))
@@ -839,7 +839,7 @@ BOOL isExiting = FALSE;
     fixedSpaceButton.width = 20;
 
     CGRect customMessageFrame = CGRectMake(0.0, 0.0, self.view.bounds.size.width, CUSTOM_MESSAGE_HEIGHT);
-    self.customMessageLabel = [[UILabel alloc] initWithFrame:customMessageFrame];
+    self.customMessageLabel = [[UITextView alloc] initWithFrame:customMessageFrame];
     self.customMessageLabel.alpha = 1.000;
     self.customMessageLabel.autoresizesSubviews = YES;
     self.customMessageLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
@@ -847,26 +847,18 @@ BOOL isExiting = FALSE;
     self.customMessageLabel.clearsContextBeforeDrawing = YES;
     self.customMessageLabel.clipsToBounds = YES;
     self.customMessageLabel.contentMode = UIViewContentModeScaleToFill;
-    self.customMessageLabel.enabled = YES;
+    self.customMessageLabel.editable = NO;
     self.customMessageLabel.hidden = NO;
-    self.customMessageLabel.lineBreakMode = NSLineBreakByTruncatingTail;
-
-    if ([self.customMessageLabel respondsToSelector:NSSelectorFromString(@"setMinimumScaleFactor:")]) {
-        [self.customMessageLabel setValue:@(10.0/[UIFont labelFontSize]) forKey:@"minimumScaleFactor"];
-    } else if ([self.customMessageLabel respondsToSelector:NSSelectorFromString(@"setMinimumFontSize:")]) {
-        [self.customMessageLabel setValue:@(10.0) forKey:@"minimumFontSize"];
-    }
 
     self.customMessageLabel.multipleTouchEnabled = NO;
-    self.customMessageLabel.numberOfLines = 1;
     self.customMessageLabel.opaque = YES;
-    self.customMessageLabel.shadowOffset = CGSizeMake(0.0, -1.0);
     // self.customMessageLabel.text = @"";  // this will get set later
     self.customMessageLabel.textAlignment = NSTextAlignmentLeft;
-
     // TODO: Make text color configurable.
     self.customMessageLabel.textColor = [UIColor colorWithWhite:1.000 alpha:1.000];
-    self.customMessageLabel.userInteractionEnabled = NO;
+    
+    [self.customMessageLabel setFont:[UIFont systemFontOfSize:16]];
+    self.customMessageLabel.textContainerInset = UIEdgeInsetsMake(8, 5, 0, 5);
     
     float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT : CUSTOM_MESSAGE_HEIGHT;
     CGRect toolbarFrame = CGRectMake(0.0, toolbarY, self.view.bounds.size.width, TOOLBAR_HEIGHT);
