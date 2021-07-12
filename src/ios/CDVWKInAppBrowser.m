@@ -36,7 +36,7 @@
 
 #define    IAB_BRIDGE_NAME @"cordova_iab"
 
-#define    CUSTOM_MESSAGE_HEIGHT 40.0
+#define    CUSTOM_MESSAGE_HEIGHT 54.0
 #define    TOOLBAR_HEIGHT 44.0
 #define    LOCATIONBAR_HEIGHT 21.0
 #define    FOOTER_HEIGHT ((TOOLBAR_HEIGHT) + (LOCATIONBAR_HEIGHT))
@@ -858,7 +858,8 @@ BOOL isExiting = FALSE;
     self.customMessageLabel.textColor = [UIColor colorWithWhite:1.000 alpha:1.000];
     
     [self.customMessageLabel setFont:[UIFont systemFontOfSize:16]];
-    self.customMessageLabel.textContainerInset = UIEdgeInsetsMake(8, 5, 0, 5);
+    // NOTE: top, left, bottom, right
+    self.customMessageLabel.textContainerInset = UIEdgeInsetsMake(8, 5, 8, 5);
     
     float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT : CUSTOM_MESSAGE_HEIGHT;
     CGRect toolbarFrame = CGRectMake(0.0, toolbarY, self.view.bounds.size.width, TOOLBAR_HEIGHT);
