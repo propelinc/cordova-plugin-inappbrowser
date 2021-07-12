@@ -740,7 +740,6 @@ BOOL isExiting = FALSE;
     CGRect webViewBounds = self.view.bounds;
     BOOL toolbarIsAtBottom = ![_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
     webViewBounds.size.height -= _browserOptions.location ? FOOTER_HEIGHT : TOOLBAR_HEIGHT;
-    webViewBounds.size.height -= _browserOptions.custommessage ? CUSTOM_MESSAGE_HEIGHT : 0;
     WKUserContentController* userContentController = [[WKUserContentController alloc] init];
     
     WKWebViewConfiguration* configuration = [[WKWebViewConfiguration alloc] init];
@@ -838,7 +837,7 @@ BOOL isExiting = FALSE;
     UIBarButtonItem* fixedSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
     fixedSpaceButton.width = 20;
 
-    CGRect customMessageFrame = CGRectMake(0.0, 0.0, self.view.bounds.size.width, CUSTOM_MESSAGE_HEIGHT);
+    CGRect customMessageFrame = CGRectMake(0.0, 0.0, self.view.bounds.size.width, 0.0);
     self.customMessageLabel = [[UITextView alloc] initWithFrame:customMessageFrame];
     self.customMessageLabel.alpha = 1.000;
     self.customMessageLabel.autoresizesSubviews = YES;
@@ -852,6 +851,7 @@ BOOL isExiting = FALSE;
 
     self.customMessageLabel.multipleTouchEnabled = NO;
     self.customMessageLabel.opaque = YES;
+    self.customMessageLabel.scrollEnabled = NO;
     // self.customMessageLabel.text = @"";  // this will get set later
     self.customMessageLabel.textAlignment = NSTextAlignmentLeft;
     // TODO: Make text color configurable.
@@ -860,8 +860,13 @@ BOOL isExiting = FALSE;
     [self.customMessageLabel setFont:[UIFont systemFontOfSize:16]];
     // NOTE: top, left, bottom, right
     self.customMessageLabel.textContainerInset = UIEdgeInsetsMake(8, 5, 8, 5);
+
+    CGSize sizeThatFitsTextView = [self.customMessageLabel sizeThatFits:CGSizeMake(self.customMessageLabel.frame.size.width, CGFLOAT_MAX)];
+    customMessageFrame.size.height = sizeThatFitsTextView.height;
+    // adjust webview height accordingly
+    webViewBounds.size.height -= _browserOptions.custommessage ? self.customMessageLabel.frame.size.height : 0;
     
-    float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT : CUSTOM_MESSAGE_HEIGHT;
+    float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT : 0;
     CGRect toolbarFrame = CGRectMake(0.0, toolbarY, self.view.bounds.size.width, TOOLBAR_HEIGHT);
     
     self.toolbar = [[UIToolbar alloc] initWithFrame:toolbarFrame];
@@ -984,6 +989,7 @@ BOOL isExiting = FALSE;
     
     BOOL toolbarVisible = !self.toolbar.hidden;
     BOOL customMessageVisible = !self.customMessageLabel.hidden;
+    float customMessageHeight = customMessageVisible ? self.customMessageLabel.frame.size.height : 0;
     
     // prevent double show/hide
     if (show == !(self.addressLabel.hidden)) {
@@ -998,8 +1004,7 @@ BOOL isExiting = FALSE;
             // put locationBar on top of the toolBar
             
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= FOOTER_HEIGHT;
-            webViewBounds.size.height -= customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
+            webViewBounds.size.height -= (FOOTER_HEIGHT + customMessageHeight);
             [self setWebViewFrame:webViewBounds];
             
             locationbarFrame.origin.y = webViewBounds.size.height;
@@ -1008,8 +1013,7 @@ BOOL isExiting = FALSE;
             // no toolBar, so put locationBar at the bottom
             
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= LOCATIONBAR_HEIGHT;
-            webViewBounds.size.height -= customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
+            webViewBounds.size.height -= (LOCATIONBAR_HEIGHT + customMessageHeight);
             [self setWebViewFrame:webViewBounds];
             
             locationbarFrame.origin.y = webViewBounds.size.height;
@@ -1023,12 +1027,11 @@ BOOL isExiting = FALSE;
             
             // webView take up whole height less toolBar height
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= TOOLBAR_HEIGHT;
-            webViewBounds.size.height -= customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
+            webViewBounds.size.height -= (TOOLBAR_HEIGHT + customMessageHeight);
             [self setWebViewFrame:webViewBounds];
         } else {
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
+            webViewBounds.size.height -= customMessageHeight;
             [self setWebViewFrame:webViewBounds];
         }
     }
@@ -1041,6 +1044,7 @@ BOOL isExiting = FALSE;
 
     BOOL locationbarVisible = !self.addressLabel.hidden;
     BOOL customMessageVisible = !self.customMessageLabel.hidden;
+    float customMessageHeight = customMessageVisible ? self.customMessageLabel.frame.size.height : 0;
     
     // prevent double show/hide
     if (show == !(self.toolbar.hidden)) {
@@ -1054,27 +1058,23 @@ BOOL isExiting = FALSE;
         if (locationbarVisible) {
             // locationBar at the bottom, move locationBar up
             // put toolBar at the bottom
-            webViewBounds.size.height -= FOOTER_HEIGHT;
-            webViewBounds.size.height -= customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
+            webViewBounds.size.height -= (FOOTER_HEIGHT + customMessageHeight);
             locationbarFrame.origin.y = webViewBounds.size.height;
             self.addressLabel.frame = locationbarFrame;
             self.toolbar.frame = toolbarFrame;
         } else {
             // no locationBar, so put toolBar at the bottom
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= TOOLBAR_HEIGHT;
-            webViewBounds.size.height -= customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
+            webViewBounds.size.height -= (TOOLBAR_HEIGHT + customMessageHeight);
             self.toolbar.frame = toolbarFrame;
         }
         
         if ([toolbarPosition isEqualToString:kInAppBrowserToolbarBarPositionTop]) {
-            toolbarFrame.origin.y = customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
-            webViewBounds.origin.y += toolbarFrame.size.height;
-            webViewBounds.origin.y += customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
+            toolbarFrame.origin.y = customMessageHeight;
+            webViewBounds.origin.y += (toolbarFrame.size.height + customMessageHeight);
             [self setWebViewFrame:webViewBounds];
         } else {
-            toolbarFrame.origin.y = (webViewBounds.size.height + LOCATIONBAR_HEIGHT);
-            toolbarFrame.origin.y += customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
+            toolbarFrame.origin.y = (webViewBounds.size.height + LOCATIONBAR_HEIGHT + customMessageHeight);
         }
         [self setWebViewFrame:webViewBounds];
         
@@ -1087,17 +1087,15 @@ BOOL isExiting = FALSE;
             
             // webView take up whole height less locationBar height
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= LOCATIONBAR_HEIGHT;
-            webViewBounds.size.height -= customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
+            webViewBounds.size.height -= (LOCATIONBAR_HEIGHT + customMessageHeight);
             [self setWebViewFrame:webViewBounds];
             
             // move locationBar down
-            locationbarFrame.origin.y = webViewBounds.size.height;
-            locationbarFrame.origin.y += customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
+            locationbarFrame.origin.y = webViewBounds.size.height + customMessageHeight;
             self.addressLabel.frame = locationbarFrame;
         } else {
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= customMessageVisible ? CUSTOM_MESSAGE_HEIGHT : 0;
+            webViewBounds.size.height -= customMessageHeight;
             [self setWebViewFrame:webViewBounds];
         }
     }
@@ -1129,6 +1127,7 @@ BOOL isExiting = FALSE;
 - (void)setCustomMessageLabelText:(NSString*)message
 {
     self.customMessageLabel.text = message;
+    [self rePositionViews];
 }
 
 - (void)viewDidLoad
@@ -1224,16 +1223,18 @@ BOOL isExiting = FALSE;
     // account for web view height portion that may have been reduced by a previous call to this method
     viewBounds.size.height = viewBounds.size.height - statusBarHeight + lastReducedStatusBarHeight;
     lastReducedStatusBarHeight = statusBarHeight;
+
+    if (_browserOptions.custommessage) {
+        CGSize sizeThatFitsTextView = [self.customMessageLabel sizeThatFits:CGSizeMake(self.customMessageLabel.frame.size.width, CGFLOAT_MAX)];
+        self.customMessageLabel.frame = CGRectMake(self.customMessageLabel.frame.origin.x, statusBarHeight, self.customMessageLabel.frame.size.width, sizeThatFitsTextView.height);
+
+        viewBounds.origin.y += self.customMessageLabel.frame.size.height;
+    }
     
     if ((_browserOptions.toolbar) && ([_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop])) {
         // if we have to display the toolbar on top of the web view, we need to account for its height
         viewBounds.origin.y += TOOLBAR_HEIGHT;
-        self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, _browserOptions ? CUSTOM_MESSAGE_HEIGHT + statusBarHeight : statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
-    }
-
-    if (_browserOptions.custommessage) {
-        viewBounds.origin.y += CUSTOM_MESSAGE_HEIGHT;
-        self.customMessageLabel.frame = CGRectMake(self.customMessageLabel.frame.origin.x, statusBarHeight, self.customMessageLabel.frame.size.width, self.customMessageLabel.frame.size.height);
+        self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, _browserOptions ? self.customMessageLabel.frame.size.height + statusBarHeight : statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
     }
     
     self.webView.frame = viewBounds;
