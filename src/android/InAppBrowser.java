@@ -1088,7 +1088,7 @@ public class InAppBrowser extends CordovaPlugin {
                 // Add custom message!
                 RelativeLayout messageBanner = new RelativeLayout(cordova.getActivity());
                 messageBanner.setBackgroundColor(toolbarColor);  // or some other color?
-                messageBanner.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(44)));
+                messageBanner.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(48)));
                 messageBanner.setPadding(this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2));
                 messageBanner.setHorizontalGravity(Gravity.LEFT);
                 messageBanner.setVerticalGravity(Gravity.TOP);
@@ -1096,9 +1096,9 @@ public class InAppBrowser extends CordovaPlugin {
                 messageText = new TextView(cordova.getActivity());
                 messageText.setText(customMessageText);
                 messageText.setTextSize(16);
-                messageText.setTextColor(android.graphics.Color.BLACK); // set this based on a config
+                messageText.setTextColor(android.graphics.Color.WHITE); // TODO: set this based on a config
                 messageText.setGravity(Gravity.LEFT);
-                messageText.setPadding(this.dpToPixels(10), 0, this.dpToPixels(10), 0);
+                messageText.setPadding(this.dpToPixels(8), 0, this.dpToPixels(8), 0);
 
                 messageBanner.addView(messageText);
                 main.addView(messageBanner);
