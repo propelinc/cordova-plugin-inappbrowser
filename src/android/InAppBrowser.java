@@ -1125,8 +1125,6 @@ public class InAppBrowser extends CordovaPlugin {
 
                 // Set up the customizable banner.
                 RelativeLayout bannerLayout = new RelativeLayout(cordova.getActivity());
-
-                // Use the same background color as used for the toolbar.
                 bannerLayout.setBackgroundColor(bannerColor);
                 bannerLayout.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
                 // NOTE: Padding uses the format: left, top, right, bottom.
@@ -1150,7 +1148,6 @@ public class InAppBrowser extends CordovaPlugin {
                 if (showBanner) {
                     main.addView(bannerLayout);
                 }
-                
 
                 // Add our webview to our main view/layout
                 RelativeLayout webViewLayout = new RelativeLayout(cordova.getActivity());

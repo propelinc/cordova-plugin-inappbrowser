@@ -855,22 +855,20 @@ BOOL isExiting = FALSE;
     self.bannerTextView.contentMode = UIViewContentModeScaleToFill;
     self.bannerTextView.editable = NO;
     self.bannerTextView.hidden = NO;
-
     self.bannerTextView.multipleTouchEnabled = NO;
     self.bannerTextView.opaque = YES;
     self.bannerTextView.scrollEnabled = NO;
     self.bannerTextView.textAlignment = NSTextAlignmentLeft;
     self.bannerTextView.textColor = [self colorFromHexString:_browserOptions.bannertextcolor];
-    
-    [self.bannerTextView setFont:[UIFont systemFontOfSize:[_browserOptions.bannertextsize intValue]]];
     // NOTE: Edge format is top, left, bottom, right.
     self.bannerTextView.textContainerInset = UIEdgeInsetsMake(8, 5, 8, 5);
-
     self.bannerTextView.userInteractionEnabled = YES;
+    
+    [self.bannerTextView setFont:[UIFont systemFontOfSize:[_browserOptions.bannertextsize intValue]]];
 
     CGSize sizeThatFitsTextView = [self.bannerTextView sizeThatFits:CGSizeMake(self.bannerTextView.frame.size.width, CGFLOAT_MAX)];
     bannerFrame.size.height = sizeThatFitsTextView.height;
-    // adjust webview height accordingly
+    // Adjust webview height accordingly.
     webViewBounds.size.height -= _browserOptions.banner ? self.bannerTextView.frame.size.height : 0;
 
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(bannerTextViewTapped:)];
@@ -908,7 +906,7 @@ BOOL isExiting = FALSE;
     self.addressLabel.alpha = 1.000;
     self.addressLabel.autoresizesSubviews = YES;
     self.addressLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin;
-    // deal with transparent url bar issued based on https://github.com/apache/cordova-plugin-inappbrowser/issues/870
+    // Don't use transparent url bar - based on https://github.com/apache/cordova-plugin-inappbrowser/issues/870
     self.addressLabel.backgroundColor = [self colorFromHexString:_browserOptions.toolbarcolor];
     self.addressLabel.baselineAdjustment = UIBaselineAdjustmentAlignCenters;
     self.addressLabel.clearsContextBeforeDrawing = YES;
@@ -1113,8 +1111,6 @@ BOOL isExiting = FALSE;
     }
 }
 
-// Note: This method is incomplete, but should be OK as long as the custom message hidden state
-// is not changed after it is first created.
 - (void)showBanner:(BOOL)show
 {   
     // prevent double show/hide
