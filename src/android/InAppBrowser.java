@@ -121,6 +121,7 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String BEFORELOAD = "beforeload";
     private static final String FULLSCREEN = "fullscreen";
     private static final String CUSTOM_MESSAGE_TEXT = "custommessagetext";
+    private static final String CUSTOM_MESSAGE_TAPPED_EVENT = "custommessagetapped";
 
     private static final List customizableOptions = Arrays.asList(CLOSE_BUTTON_CAPTION, TOOLBAR_COLOR, NAVIGATION_COLOR, CLOSE_BUTTON_COLOR, FOOTER_COLOR, CUSTOM_MESSAGE_TEXT);
 
@@ -1101,6 +1102,15 @@ public class InAppBrowser extends CordovaPlugin {
                 messageText.setTextColor(android.graphics.Color.WHITE); 
                 messageText.setGravity(Gravity.LEFT);
 
+                // Initialize a click event for the banner. The listener needs to be replaced 
+                // each time the url changes.
+                messageText.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        sendCustomMessageTapped(url);
+                    }
+                });
+
                 messageBanner.addView(messageText);
                 main.addView(messageBanner);
 
@@ -1159,6 +1169,19 @@ public class InAppBrowser extends CordovaPlugin {
                 callbackContext = null;
             }
         }
+    }
+
+    private boolean sendCustomMessageTapped(String url) {
+        try {
+            JSONObject obj = new JSONObject();
+            obj.put("type", CUSTOM_MESSAGE_TAPPED_EVENT);
+            obj.put("url", url);
+            sendUpdate(obj, true);
+            return true;
+        } catch (JSONException ex) {
+            LOG.e(LOG_TAG, "URI passed in has caused a JSON error.");
+        }
+        return false;
     }
 
     /**
@@ -1460,6 +1483,15 @@ public class InAppBrowser extends CordovaPlugin {
             } catch (JSONException ex) {
                 LOG.e(LOG_TAG, "URI passed in has caused a JSON error.");
             }
+
+            // Update the custom-message banner click handler such that it will raise
+            // an event with the new URL.
+            messageText.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    sendCustomMessageTapped(url);
+                }
+            });
         }
 
         public void onPageFinished(WebView view, String url) {
