@@ -47,6 +47,7 @@
 - (void)show:(CDVInvokedUrlCommand*)command;
 - (void)hide:(CDVInvokedUrlCommand*)command;
 - (void)loadAfterBeforeload:(CDVInvokedUrlCommand*)command;
+- (void)sendCustomMessageTapped:(NSString *)url;
 
 @end
 
@@ -78,6 +79,7 @@
 - (void)showCustomMessage:(BOOL)show;
 - (void)setCloseButtonTitle:(NSString*)title : (NSString*) colorString : (int) buttonIndex;
 - (void)setCustomMessageLabelText:(NSString*)message;
+- (void)textViewTapped:(UITapGestureRecognizer *)tap;
 
 - (id)initWithBrowserOptions: (CDVInAppBrowserOptions*) browserOptions andSettings:(NSDictionary*) settings;
 

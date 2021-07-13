@@ -703,6 +703,14 @@ static CDVWKInAppBrowser* instance = nil;
     _previousStatusBarStyle = -1; // this value was reset before reapplying it. caused statusbar to stay black on ios7
 }
 
+- (void)sendCustomMessageTapped:(NSString *)url {
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                                            messageAsDictionary:@{@"type":@"custommessagetapped", @"url":url}];
+    [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
+
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
+}
+
 @end //CDVWKInAppBrowser
 
 #pragma mark CDVWKInAppBrowserViewController
@@ -861,10 +869,17 @@ BOOL isExiting = FALSE;
     // NOTE: top, left, bottom, right
     self.customMessageLabel.textContainerInset = UIEdgeInsetsMake(8, 5, 8, 5);
 
+    self.customMessageLabel.userInteractionEnabled = YES;
+
     CGSize sizeThatFitsTextView = [self.customMessageLabel sizeThatFits:CGSizeMake(self.customMessageLabel.frame.size.width, CGFLOAT_MAX)];
     customMessageFrame.size.height = sizeThatFitsTextView.height;
     // adjust webview height accordingly
     webViewBounds.size.height -= _browserOptions.custommessage ? self.customMessageLabel.frame.size.height : 0;
+
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(textViewTapped:)];
+    tap.delegate = self; 
+    tap.numberOfTapsRequired = 1; 
+    [self.customMessageLabel addGestureRecognizer:tap];
     
     float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT : 0;
     CGRect toolbarFrame = CGRectMake(0.0, toolbarY, self.view.bounds.size.width, TOOLBAR_HEIGHT);
@@ -1201,6 +1216,11 @@ BOOL isExiting = FALSE;
     [self rePositionViews];
     
     [super viewWillAppear:animated];
+}
+
+- (void)textViewTapped:(UITapGestureRecognizer *)tap {
+    NSString* currentURL = [self.webView.URL absoluteString];
+    [self.navigationDelegate sendCustomMessageTapped:currentURL];
 }
 
 //
