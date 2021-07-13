@@ -34,7 +34,7 @@
             exit: channel.create('exit'),
             customscheme: channel.create('customscheme'),
             message: channel.create('message'),
-            custommessagetapped: channel.create("custommessagetapped")
+            bannertapped: channel.create("bannertapped")
         };
     }
 
@@ -92,8 +92,8 @@
             }
         },
 
-        setCustomMessage: function (message, cb) {
-            exec(cb, null, 'InAppBrowser', 'setCustomMessage', [message, !!cb]);
+        setBannerMessage: function (message, cb) {
+            exec(cb, null, 'InAppBrowser', 'setBannerMessage', [message, !!cb]);
         }
     };
 

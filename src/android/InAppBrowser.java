@@ -120,15 +120,30 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String FOOTER_COLOR = "footercolor";
     private static final String BEFORELOAD = "beforeload";
     private static final String FULLSCREEN = "fullscreen";
-    private static final String CUSTOM_MESSAGE_TEXT = "custommessagetext";
-    private static final String CUSTOM_MESSAGE_TAPPED_EVENT = "custommessagetapped";
 
-    private static final List customizableOptions = Arrays.asList(CLOSE_BUTTON_CAPTION, TOOLBAR_COLOR, NAVIGATION_COLOR, CLOSE_BUTTON_COLOR, FOOTER_COLOR, CUSTOM_MESSAGE_TEXT);
+    private static final String SHOW_BANNER = "banner";
+    private static final String BANNER_COLOR = "bannercolor";
+    private static final String BANNER_TEXT_COLOR = "bannertextcolor";
+    private static final String BANNER_TEXT_SIZE = "bannertextsize";
+    private static final String BANNER_MESSAGE = "bannermessage";
+
+    private static final String BANNER_TAPPED_EVENT = "bannertapped";
+
+    private static final List customizableOptions = Arrays.asList(
+        CLOSE_BUTTON_CAPTION,
+        TOOLBAR_COLOR,
+        NAVIGATION_COLOR,
+        CLOSE_BUTTON_COLOR,
+        FOOTER_COLOR,
+        BANNER_COLOR,
+        BANNER_TEXT_COLOR,
+        BANNER_TEXT_SIZE,
+        BANNER_MESSAGE);
 
     private InAppBrowserDialog dialog;
     private WebView inAppWebView;
     private EditText edittext;
-    private TextView messageText;
+    private TextView bannerTextView;
     private CallbackContext callbackContext;
     private boolean showLocationBar = true;
     private boolean showZoomControls = true;
@@ -156,7 +171,12 @@ public class InAppBrowser extends CordovaPlugin {
     private boolean fullscreen = true;
     private String[] allowedSchemes;
     private InAppBrowserClient currentClient;
-    private String customMessageText = "";
+
+    private boolean showBanner = false;
+    private int bannerColor = android.graphics.Color.LTGRAY;
+    private int bannerTextColor = android.graphics.Color.BLACK;
+    private int bannerTextSize = 16;
+    private String bannerMessageText = "";
 
     /**
      * Executes the request and returns PluginResult.
@@ -343,12 +363,12 @@ public class InAppBrowser extends CordovaPlugin {
             pluginResult.setKeepCallback(true);
             this.callbackContext.sendPluginResult(pluginResult);
         }
-        else if (action.equals("setCustomMessage")) {
+        else if (action.equals("setBannerMessage")) {
             final String newMessage = args.getString(0);
             this.cordova.getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    messageText.setText(newMessage);
+                    bannerTextView.setText(newMessage);
                 }
             });
             PluginResult pluginResult = new PluginResult(PluginResult.Status.OK);
@@ -737,9 +757,26 @@ public class InAppBrowser extends CordovaPlugin {
             if (fullscreenSet != null) {
                 fullscreen = fullscreenSet.equals("yes") ? true : false;
             }
-            String customMessageTextSet = features.get(CUSTOM_MESSAGE_TEXT);
-            if (customMessageTextSet != null) {
-                customMessageText = customMessageTextSet;
+
+            String showBannerSet = features.get(SHOW_BANNER);
+            if (showBannerSet != null) {
+                showBanner = showBannerSet.equals("yes") ? true : false;
+            }
+            String bannerColorSet = features.get(BANNER_COLOR);
+            if (bannerColorSet != null) {
+                bannerColor = android.graphics.Color.parseColor(bannerColorSet);
+            }
+            String bannerTextColorSet = features.get(BANNER_TEXT_COLOR);
+            if (bannerTextColorSet != null) {
+                bannerTextColor = android.graphics.Color.parseColor(bannerTextColorSet);
+            }
+            String bannerTextSizeSet = features.get(BANNER_TEXT_SIZE);
+            if (bannerTextSizeSet != null) {
+                bannerTextSize = Integer.parseInt(bannerTextSizeSet);
+            }
+            String bannerMessageSet = features.get(BANNER_MESSAGE);
+            if (bannerMessageSet != null) {
+                bannerMessageText = bannerMessageSet;
             }
         }
 
@@ -1086,31 +1123,34 @@ public class InAppBrowser extends CordovaPlugin {
                     main.addView(toolbar);
                 }
 
-                // Add custom message!
-                RelativeLayout messageBanner = new RelativeLayout(cordova.getActivity());
-                messageBanner.setBackgroundColor(toolbarColor);  // or some other color?
-                messageBanner.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
-                // NOTE: left, top, right, bottom
-                messageBanner.setPadding(this.dpToPixels(10), 0, this.dpToPixels(10), this.dpToPixels(6));
-                messageBanner.setHorizontalGravity(Gravity.LEFT);
-                messageBanner.setVerticalGravity(Gravity.TOP);
+                // Set up the customizable banner.
+                RelativeLayout bannerLayout = new RelativeLayout(cordova.getActivity());
 
-                messageText = new TextView(cordova.getActivity());
-                messageText.setText(customMessageText);
-                messageText.setTextSize(16);
-                // TODO: set this based on a config
-                messageText.setTextColor(android.graphics.Color.WHITE); 
-                messageText.setGravity(Gravity.LEFT);
+                // Use the same background color as used for the toolbar.
+                bannerLayout.setBackgroundColor(bannerColor);
+                bannerLayout.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+                // NOTE: Padding uses the format: left, top, right, bottom.
+                bannerLayout.setPadding(this.dpToPixels(10), this.dpToPixels(2), this.dpToPixels(10), this.dpToPixels(6));
+                bannerLayout.setHorizontalGravity(Gravity.LEFT);
+                bannerLayout.setVerticalGravity(Gravity.TOP);
 
-                messageText.setOnClickListener(new View.OnClickListener() {
+                bannerTextView = new TextView(cordova.getActivity());
+                bannerTextView.setText(bannerMessageText);
+                bannerTextView.setTextSize(bannerTextSize);
+                bannerTextView.setTextColor(bannerTextColor); 
+                bannerTextView.setGravity(Gravity.LEFT);
+                bannerTextView.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        sendCustomMessageTapped();
+                        sendBannerTappedEvent();
                     }
                 });
+                bannerLayout.addView(bannerTextView);
 
-                messageBanner.addView(messageText);
-                main.addView(messageBanner);
+                if (showBanner) {
+                    main.addView(bannerLayout);
+                }
+                
 
                 // Add our webview to our main view/layout
                 RelativeLayout webViewLayout = new RelativeLayout(cordova.getActivity());
@@ -1169,10 +1209,10 @@ public class InAppBrowser extends CordovaPlugin {
         }
     }
 
-    private boolean sendCustomMessageTapped() {
+    private boolean sendBannerTappedEvent() {
         try {
             JSONObject obj = new JSONObject();
-            obj.put("type", CUSTOM_MESSAGE_TAPPED_EVENT);
+            obj.put("type", BANNER_TAPPED_EVENT);
             obj.put("url", inAppWebView.getUrl());
             sendUpdate(obj, true);
             return true;

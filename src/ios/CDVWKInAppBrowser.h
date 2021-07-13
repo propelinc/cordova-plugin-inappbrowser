@@ -43,11 +43,11 @@
 - (void)open:(CDVInvokedUrlCommand*)command;
 - (void)close:(CDVInvokedUrlCommand*)command;
 - (void)injectScriptCode:(CDVInvokedUrlCommand*)command;
-- (void)setCustomMessage:(CDVInvokedUrlCommand*)command;
+- (void)setBannerMessage:(CDVInvokedUrlCommand*)command;
 - (void)show:(CDVInvokedUrlCommand*)command;
 - (void)hide:(CDVInvokedUrlCommand*)command;
 - (void)loadAfterBeforeload:(CDVInvokedUrlCommand*)command;
-- (void)sendCustomMessageTapped:(NSString *)url;
+- (void)sendBannerTappedEvent:(NSString *)url;
 
 @end
 
@@ -62,7 +62,7 @@
 @property (nonatomic, strong) IBOutlet UIBarButtonItem* closeButton;
 @property (nonatomic, strong) IBOutlet UILabel* addressLabel;
 @property (nonatomic, strong) IBOutlet UIBarButtonItem* backButton;
-@property (nonatomic, strong) IBOutlet UITextView* customMessageLabel;
+@property (nonatomic, strong) IBOutlet UITextView* bannerTextView;
 @property (nonatomic, strong) IBOutlet UIBarButtonItem* forwardButton;
 @property (nonatomic, strong) IBOutlet UIActivityIndicatorView* spinner;
 @property (nonatomic, strong) IBOutlet UIToolbar* toolbar;
@@ -76,10 +76,10 @@
 - (void)navigateTo:(NSURL*)url;
 - (void)showLocationBar:(BOOL)show;
 - (void)showToolBar:(BOOL)show : (NSString *) toolbarPosition;
-- (void)showCustomMessage:(BOOL)show;
+- (void)showBanner:(BOOL)show;
 - (void)setCloseButtonTitle:(NSString*)title : (NSString*) colorString : (int) buttonIndex;
-- (void)setCustomMessageLabelText:(NSString*)message;
-- (void)textViewTapped:(UITapGestureRecognizer *)tap;
+- (void)setBannerTextViewText:(NSString*)message;
+- (void)bannerTextViewTapped:(UITapGestureRecognizer *)tap;
 
 - (id)initWithBrowserOptions: (CDVInAppBrowserOptions*) browserOptions andSettings:(NSDictionary*) settings;
 
