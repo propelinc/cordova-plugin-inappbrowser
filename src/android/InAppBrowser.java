@@ -1102,12 +1102,10 @@ public class InAppBrowser extends CordovaPlugin {
                 messageText.setTextColor(android.graphics.Color.WHITE); 
                 messageText.setGravity(Gravity.LEFT);
 
-                // Initialize a click event for the banner. The listener needs to be replaced 
-                // each time the url changes.
                 messageText.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        sendCustomMessageTapped(url);
+                        sendCustomMessageTapped();
                     }
                 });
 
@@ -1171,11 +1169,11 @@ public class InAppBrowser extends CordovaPlugin {
         }
     }
 
-    private boolean sendCustomMessageTapped(String url) {
+    private boolean sendCustomMessageTapped() {
         try {
             JSONObject obj = new JSONObject();
             obj.put("type", CUSTOM_MESSAGE_TAPPED_EVENT);
-            obj.put("url", url);
+            obj.put("url", inAppWebView.getUrl());
             sendUpdate(obj, true);
             return true;
         } catch (JSONException ex) {
@@ -1483,15 +1481,6 @@ public class InAppBrowser extends CordovaPlugin {
             } catch (JSONException ex) {
                 LOG.e(LOG_TAG, "URI passed in has caused a JSON error.");
             }
-
-            // Update the custom-message banner click handler such that it will raise
-            // an event with the new URL.
-            messageText.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    sendCustomMessageTapped(url);
-                }
-            });
         }
 
         public void onPageFinished(WebView view, String url) {
