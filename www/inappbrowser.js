@@ -34,7 +34,8 @@
             exit: channel.create('exit'),
             customscheme: channel.create('customscheme'),
             message: channel.create('message'),
-            download: channel.create('download')
+            download: channel.create('download'),
+            bannertapped: channel.create("bannertapped")
         };
     }
 
@@ -94,6 +95,10 @@
 
         addDownloadListener: function (success, error) {
             exec(success, error, 'InAppBrowser', 'downloadListener');
+        },
+
+        setBannerMessage: function (message, cb) {
+            exec(cb, null, 'InAppBrowser', 'setBannerMessage', [message, !!cb]);
         }
     };
 

@@ -45,6 +45,12 @@
         self.toolbarcolor = nil;
         self.toolbartranslucent = YES;
         self.beforeload = @"";
+
+        self.banner = NO;
+        self.bannermessage = @"";
+        self.bannercolor = @"#CCCCCC";
+        self.bannertextcolor = @"#000000";
+        self.bannertextsize = @"16";
     }
 
     return self;
