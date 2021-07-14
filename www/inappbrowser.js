@@ -33,7 +33,8 @@
             loaderror: channel.create('loaderror'),
             exit: channel.create('exit'),
             customscheme: channel.create('customscheme'),
-            message: channel.create('message')
+            message: channel.create('message'),
+            bannertapped: channel.create("bannertapped")
         };
     }
 
@@ -89,6 +90,10 @@
             } else {
                 throw new Error('insertCSS requires exactly one of code or file to be specified');
             }
+        },
+
+        setBannerMessage: function (message, cb) {
+            exec(cb, null, 'InAppBrowser', 'setBannerMessage', [message, !!cb]);
         }
     };
 

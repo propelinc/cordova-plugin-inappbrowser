@@ -208,12 +208,18 @@ static CDVWKInAppBrowser* instance = nil;
         }
     }
     
+    [self.inAppBrowserViewController showBanner:browserOptions.banner];
     [self.inAppBrowserViewController showLocationBar:browserOptions.location];
     [self.inAppBrowserViewController showToolBar:browserOptions.toolbar :browserOptions.toolbarposition];
     if (browserOptions.closebuttoncaption != nil || browserOptions.closebuttoncolor != nil) {
         int closeButtonIndex = browserOptions.lefttoright ? (browserOptions.hidenavigationbuttons ? 1 : 4) : 0;
         [self.inAppBrowserViewController setCloseButtonTitle:browserOptions.closebuttoncaption :browserOptions.closebuttoncolor :closeButtonIndex];
     }
+
+    if (browserOptions.banner && browserOptions.bannermessage != @"") {
+        [self.inAppBrowserViewController setBannerTextViewText:browserOptions.bannermessage];
+    }
+
     // Set Presentation Style
     UIModalPresentationStyle presentationStyle = UIModalPresentationFullScreen; // default
     if (browserOptions.presentationstyle != nil) {
@@ -475,6 +481,11 @@ static CDVWKInAppBrowser* instance = nil;
     [self injectDeferredObject:[command argumentAtIndex:0] withWrapper:jsWrapper];
 }
 
+- (void)setBannerMessage:(CDVInvokedUrlCommand*)command
+{
+    [self.inAppBrowserViewController setBannerTextViewText:[command argumentAtIndex:0]];
+}
+
 - (BOOL)isValidCallbackId:(NSString *)callbackId
 {
     NSError *err = nil;
@@ -691,6 +702,14 @@ static CDVWKInAppBrowser* instance = nil;
     _previousStatusBarStyle = -1; // this value was reset before reapplying it. caused statusbar to stay black on ios7
 }
 
+- (void)sendBannerTappedEvent:(NSString *)url {
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                                            messageAsDictionary:@{@"type":@"bannertapped", @"url":url}];
+    [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
+
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
+}
+
 @end //CDVWKInAppBrowser
 
 #pragma mark CDVWKInAppBrowserViewController
@@ -824,8 +843,40 @@ BOOL isExiting = FALSE;
     
     UIBarButtonItem* fixedSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
     fixedSpaceButton.width = 20;
+
+    CGRect bannerFrame = CGRectMake(0.0, 0.0, self.view.bounds.size.width, 0.0);
+    self.bannerTextView = [[UITextView alloc] initWithFrame:bannerFrame];
+    self.bannerTextView.alpha = 1.000;
+    self.bannerTextView.autoresizesSubviews = YES;
+    self.bannerTextView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    self.bannerTextView.backgroundColor = [self colorFromHexString:_browserOptions.bannercolor];
+    self.bannerTextView.clearsContextBeforeDrawing = YES;
+    self.bannerTextView.clipsToBounds = YES;
+    self.bannerTextView.contentMode = UIViewContentModeScaleToFill;
+    self.bannerTextView.editable = NO;
+    self.bannerTextView.hidden = NO;
+    self.bannerTextView.multipleTouchEnabled = NO;
+    self.bannerTextView.opaque = YES;
+    self.bannerTextView.scrollEnabled = NO;
+    self.bannerTextView.textAlignment = NSTextAlignmentLeft;
+    self.bannerTextView.textColor = [self colorFromHexString:_browserOptions.bannertextcolor];
+    // NOTE: Edge format is top, left, bottom, right.
+    self.bannerTextView.textContainerInset = UIEdgeInsetsMake(8, 5, 8, 5);
+    self.bannerTextView.userInteractionEnabled = YES;
     
-    float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT : 0.0;
+    [self.bannerTextView setFont:[UIFont systemFontOfSize:[_browserOptions.bannertextsize intValue]]];
+
+    CGSize sizeThatFitsTextView = [self.bannerTextView sizeThatFits:CGSizeMake(self.bannerTextView.frame.size.width, CGFLOAT_MAX)];
+    bannerFrame.size.height = sizeThatFitsTextView.height;
+    // Adjust webview height accordingly.
+    webViewBounds.size.height -= _browserOptions.banner ? self.bannerTextView.frame.size.height : 0;
+
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(bannerTextViewTapped:)];
+    tap.delegate = self; 
+    tap.numberOfTapsRequired = 1; 
+    [self.bannerTextView addGestureRecognizer:tap];
+    
+    float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT : 0;
     CGRect toolbarFrame = CGRectMake(0.0, toolbarY, self.view.bounds.size.width, TOOLBAR_HEIGHT);
     
     self.toolbar = [[UIToolbar alloc] initWithFrame:toolbarFrame];
@@ -855,7 +906,8 @@ BOOL isExiting = FALSE;
     self.addressLabel.alpha = 1.000;
     self.addressLabel.autoresizesSubviews = YES;
     self.addressLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin;
-    self.addressLabel.backgroundColor = [UIColor clearColor];
+    // Don't use transparent url bar - based on https://github.com/apache/cordova-plugin-inappbrowser/issues/870
+    self.addressLabel.backgroundColor = [self colorFromHexString:_browserOptions.toolbarcolor];
     self.addressLabel.baselineAdjustment = UIBaselineAdjustmentAlignCenters;
     self.addressLabel.clearsContextBeforeDrawing = YES;
     self.addressLabel.clipsToBounds = YES;
@@ -909,6 +961,7 @@ BOOL isExiting = FALSE;
     }
     
     self.view.backgroundColor = [UIColor clearColor];
+    [self.view addSubview:self.bannerTextView];
     [self.view addSubview:self.toolbar];
     [self.view addSubview:self.addressLabel];
     [self.view addSubview:self.spinner];
@@ -945,6 +998,8 @@ BOOL isExiting = FALSE;
     CGRect locationbarFrame = self.addressLabel.frame;
     
     BOOL toolbarVisible = !self.toolbar.hidden;
+    BOOL bannerVisible = !self.bannerTextView.hidden;
+    float bannerHeight = bannerVisible ? self.bannerTextView.frame.size.height : 0;
     
     // prevent double show/hide
     if (show == !(self.addressLabel.hidden)) {
@@ -959,7 +1014,7 @@ BOOL isExiting = FALSE;
             // put locationBar on top of the toolBar
             
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= FOOTER_HEIGHT;
+            webViewBounds.size.height -= (FOOTER_HEIGHT + bannerHeight);
             [self setWebViewFrame:webViewBounds];
             
             locationbarFrame.origin.y = webViewBounds.size.height;
@@ -968,7 +1023,7 @@ BOOL isExiting = FALSE;
             // no toolBar, so put locationBar at the bottom
             
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= LOCATIONBAR_HEIGHT;
+            webViewBounds.size.height -= (LOCATIONBAR_HEIGHT + bannerHeight);
             [self setWebViewFrame:webViewBounds];
             
             locationbarFrame.origin.y = webViewBounds.size.height;
@@ -982,11 +1037,12 @@ BOOL isExiting = FALSE;
             
             // webView take up whole height less toolBar height
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= TOOLBAR_HEIGHT;
+            webViewBounds.size.height -= (TOOLBAR_HEIGHT + bannerHeight);
             [self setWebViewFrame:webViewBounds];
         } else {
-            // no toolBar, expand webView to screen dimensions
-            [self setWebViewFrame:self.view.bounds];
+            CGRect webViewBounds = self.view.bounds;
+            webViewBounds.size.height -= bannerHeight;
+            [self setWebViewFrame:webViewBounds];
         }
     }
 }
@@ -995,8 +1051,10 @@ BOOL isExiting = FALSE;
 {
     CGRect toolbarFrame = self.toolbar.frame;
     CGRect locationbarFrame = self.addressLabel.frame;
-    
+
     BOOL locationbarVisible = !self.addressLabel.hidden;
+    BOOL bannerVisible = !self.bannerTextView.hidden;
+    float bannerHeight = bannerVisible ? self.bannerTextView.frame.size.height : 0;
     
     // prevent double show/hide
     if (show == !(self.toolbar.hidden)) {
@@ -1010,23 +1068,23 @@ BOOL isExiting = FALSE;
         if (locationbarVisible) {
             // locationBar at the bottom, move locationBar up
             // put toolBar at the bottom
-            webViewBounds.size.height -= FOOTER_HEIGHT;
+            webViewBounds.size.height -= (FOOTER_HEIGHT + bannerHeight);
             locationbarFrame.origin.y = webViewBounds.size.height;
             self.addressLabel.frame = locationbarFrame;
             self.toolbar.frame = toolbarFrame;
         } else {
             // no locationBar, so put toolBar at the bottom
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= TOOLBAR_HEIGHT;
+            webViewBounds.size.height -= (TOOLBAR_HEIGHT + bannerHeight);
             self.toolbar.frame = toolbarFrame;
         }
         
         if ([toolbarPosition isEqualToString:kInAppBrowserToolbarBarPositionTop]) {
-            toolbarFrame.origin.y = 0;
-            webViewBounds.origin.y += toolbarFrame.size.height;
+            toolbarFrame.origin.y = bannerHeight;
+            webViewBounds.origin.y += (toolbarFrame.size.height + bannerHeight);
             [self setWebViewFrame:webViewBounds];
         } else {
-            toolbarFrame.origin.y = (webViewBounds.size.height + LOCATIONBAR_HEIGHT);
+            toolbarFrame.origin.y = (webViewBounds.size.height + LOCATIONBAR_HEIGHT + bannerHeight);
         }
         [self setWebViewFrame:webViewBounds];
         
@@ -1039,17 +1097,38 @@ BOOL isExiting = FALSE;
             
             // webView take up whole height less locationBar height
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= LOCATIONBAR_HEIGHT;
+            webViewBounds.size.height -= (LOCATIONBAR_HEIGHT + bannerHeight);
             [self setWebViewFrame:webViewBounds];
             
             // move locationBar down
-            locationbarFrame.origin.y = webViewBounds.size.height;
+            locationbarFrame.origin.y = webViewBounds.size.height + bannerHeight;
             self.addressLabel.frame = locationbarFrame;
         } else {
-            // no locationBar, expand webView to screen dimensions
-            [self setWebViewFrame:self.view.bounds];
+            CGRect webViewBounds = self.view.bounds;
+            webViewBounds.size.height -= bannerHeight;
+            [self setWebViewFrame:webViewBounds];
         }
     }
+}
+
+- (void)showBanner:(BOOL)show
+{   
+    // prevent double show/hide
+    if (show == !(self.bannerTextView.hidden)) {
+        return;
+    }
+
+    if (show) {
+        self.bannerTextView.hidden = NO;
+    } else {
+        self.bannerTextView.hidden = YES;
+    }
+}
+
+- (void)setBannerTextViewText:(NSString*)message
+{
+    self.bannerTextView.text = message;
+    [self rePositionViews];
 }
 
 - (void)viewDidLoad
@@ -1125,6 +1204,11 @@ BOOL isExiting = FALSE;
     [super viewWillAppear:animated];
 }
 
+- (void)bannerTextViewTapped:(UITapGestureRecognizer *)tap {
+    NSString* currentURL = [self.webView.URL absoluteString];
+    [self.navigationDelegate sendBannerTappedEvent:currentURL];
+}
+
 //
 // On iOS 7 the status bar is part of the view's dimensions, therefore it's height has to be taken into account.
 // The height of it could be hardcoded as 20 pixels, but that would assume that the upcoming releases of iOS won't
@@ -1145,11 +1229,18 @@ BOOL isExiting = FALSE;
     // account for web view height portion that may have been reduced by a previous call to this method
     viewBounds.size.height = viewBounds.size.height - statusBarHeight + lastReducedStatusBarHeight;
     lastReducedStatusBarHeight = statusBarHeight;
+
+    if (_browserOptions.banner) {
+        CGSize sizeThatFitsTextView = [self.bannerTextView sizeThatFits:CGSizeMake(self.bannerTextView.frame.size.width, CGFLOAT_MAX)];
+        self.bannerTextView.frame = CGRectMake(self.bannerTextView.frame.origin.x, statusBarHeight, self.bannerTextView.frame.size.width, sizeThatFitsTextView.height);
+
+        viewBounds.origin.y += self.bannerTextView.frame.size.height;
+    }
     
     if ((_browserOptions.toolbar) && ([_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop])) {
         // if we have to display the toolbar on top of the web view, we need to account for its height
         viewBounds.origin.y += TOOLBAR_HEIGHT;
-        self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
+        self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, _browserOptions ? self.bannerTextView.frame.size.height + statusBarHeight : statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
     }
     
     self.webView.frame = viewBounds;

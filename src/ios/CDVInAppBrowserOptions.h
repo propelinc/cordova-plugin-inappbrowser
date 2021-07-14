@@ -45,6 +45,13 @@
 @property (nonatomic, assign) BOOL disallowoverscroll;
 @property (nonatomic, copy) NSString* beforeload;
 
+// Propel customized properties
+@property (nonatomic, assign) BOOL banner;
+@property (nonatomic, copy) NSString* bannercolor;
+@property (nonatomic, copy) NSString* bannermessage;
+@property (nonatomic, copy) NSString* bannertextcolor;
+@property (nonatomic, copy) NSString* bannertextsize;
+
 + (CDVInAppBrowserOptions*)parseOptions:(NSString*)options;
 
 @end
