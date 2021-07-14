@@ -208,7 +208,7 @@ static CDVWKInAppBrowser* instance = nil;
         }
     }
     
-    [self.inAppBrowserViewController showBanner:browserOptions.bannermessage];
+    [self.inAppBrowserViewController showBanner:browserOptions.banner];
     [self.inAppBrowserViewController showLocationBar:browserOptions.location];
     [self.inAppBrowserViewController showToolBar:browserOptions.toolbar :browserOptions.toolbarposition];
     if (browserOptions.closebuttoncaption != nil || browserOptions.closebuttoncolor != nil) {
