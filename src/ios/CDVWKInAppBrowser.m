@@ -849,7 +849,7 @@ BOOL isExiting = FALSE;
     self.bannerTextView.alpha = 1.000;
     self.bannerTextView.autoresizesSubviews = YES;
     self.bannerTextView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    self.bannerTextView.backgroundColor = [self colorFromHexString:_browserOptions.bannercolor];
+    self.bannerTextView.backgroundColor = _browserOptions.bannercolor != nil ? [self colorFromHexString:_browserOptions.bannercolor] : [self colorFromHexString:@"#CCCCCC"];
     self.bannerTextView.clearsContextBeforeDrawing = YES;
     self.bannerTextView.clipsToBounds = YES;
     self.bannerTextView.contentMode = UIViewContentModeScaleToFill;
@@ -859,12 +859,12 @@ BOOL isExiting = FALSE;
     self.bannerTextView.opaque = YES;
     self.bannerTextView.scrollEnabled = NO;
     self.bannerTextView.textAlignment = NSTextAlignmentLeft;
-    self.bannerTextView.textColor = [self colorFromHexString:_browserOptions.bannertextcolor];
+    self.bannerTextView.textColor = _browserOptions.bannertextcolor != nil ? [self colorFromHexString:_browserOptions.bannertextcolor] : [self colorFromHexString:@"#000000"];
     // NOTE: Edge format is top, left, bottom, right.
     self.bannerTextView.textContainerInset = UIEdgeInsetsMake(8, 5, 8, 5);
-    self.bannerTextView.userInteractionEnabled = NO;
+    self.bannerTextView.userInteractionEnabled = YES;
     
-    [self.bannerTextView setFont:[UIFont systemFontOfSize:[_browserOptions.bannertextsize intValue]]];
+    [self.bannerTextView setFont:[UIFont systemFontOfSize:(_browserOptions.bannertextsize != nil ? [_browserOptions.bannertextsize intValue] : 16)]];
 
     CGSize sizeThatFitsTextView = [self.bannerTextView sizeThatFits:CGSizeMake(self.bannerTextView.frame.size.width, CGFLOAT_MAX)];
     bannerFrame.size.height = sizeThatFitsTextView.height;
@@ -907,7 +907,7 @@ BOOL isExiting = FALSE;
     self.addressLabel.autoresizesSubviews = YES;
     self.addressLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin;
     // Don't use transparent url bar - based on https://github.com/apache/cordova-plugin-inappbrowser/issues/870
-    self.addressLabel.backgroundColor = [self colorFromHexString:_browserOptions.toolbarcolor];
+    self.addressLabel.backgroundColor = _browserOptions.toolbarcolor != nil ? [self colorFromHexString:_browserOptions.toolbarcolor] : [self colorFromHexString:@"#CCCCCC"];
     self.addressLabel.baselineAdjustment = UIBaselineAdjustmentAlignCenters;
     self.addressLabel.clearsContextBeforeDrawing = YES;
     self.addressLabel.clipsToBounds = YES;

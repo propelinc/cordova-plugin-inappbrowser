@@ -48,9 +48,9 @@
 
         self.banner = NO;
         self.bannermessage = @"";
-        self.bannercolor = @"#CCCCCC";
-        self.bannertextcolor = @"#000000";
-        self.bannertextsize = @"16";
+        self.bannercolor = nil;
+        self.bannertextcolor = nil;
+        self.bannertextsize = nil;
     }
 
     return self;
