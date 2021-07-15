@@ -862,7 +862,7 @@ BOOL isExiting = FALSE;
     self.bannerTextView.textColor = _browserOptions.bannertextcolor != nil ? [self colorFromHexString:_browserOptions.bannertextcolor] : [self colorFromHexString:@"#000000"];
     // NOTE: Edge format is top, left, bottom, right.
     self.bannerTextView.textContainerInset = UIEdgeInsetsMake(8, 5, 8, 5);
-    self.bannerTextView.userInteractionEnabled = NO;
+    self.bannerTextView.userInteractionEnabled = YES;
     
     [self.bannerTextView setFont:[UIFont systemFontOfSize:(_browserOptions.bannertextsize != nil ? [_browserOptions.bannertextsize intValue] : 16)]];
 
