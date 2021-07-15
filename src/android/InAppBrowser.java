@@ -759,9 +759,8 @@ public class InAppBrowser extends CordovaPlugin {
             }
 
             String showBannerSet = features.get(SHOW_BANNER);
-            if (showBannerSet != null) {
-                showBanner = showBannerSet.equals("yes") ? true : false;
-            }
+            showBanner = showBannerSet != null && showBannerSet.equals("yes") ? true : false;
+
             String bannerColorSet = features.get(BANNER_COLOR);
             if (bannerColorSet != null) {
                 bannerColor = android.graphics.Color.parseColor(bannerColorSet);
