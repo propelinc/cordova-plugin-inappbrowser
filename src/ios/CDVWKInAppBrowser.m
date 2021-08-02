@@ -1235,6 +1235,9 @@ BOOL isExiting = FALSE;
         self.bannerTextView.frame = CGRectMake(self.bannerTextView.frame.origin.x, statusBarHeight, self.bannerTextView.frame.size.width, sizeThatFitsTextView.height);
 
         viewBounds.origin.y += self.bannerTextView.frame.size.height;
+
+        viewBounds.size.height = viewBounds.size.height - self.bannerTextView.frame.size.height;
+        lastReducedStatusBarHeight = lastReducedStatusBarHeight + self.bannerTextView.frame.size.height;
     }
     
     if ((_browserOptions.toolbar) && ([_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop])) {
