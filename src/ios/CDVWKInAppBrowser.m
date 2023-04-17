@@ -267,6 +267,8 @@ static CDVWKInAppBrowser* instance = nil;
     if (!browserOptions.hidden) {
         [self show:nil withNoAnimate:browserOptions.hidden];
     }
+
+    [self.inAppBrowserViewController showNavigationBar:browserOptions.navigationbar];
 }
 
 - (void)show:(CDVInvokedUrlCommand*)command{
@@ -947,17 +949,46 @@ BOOL isExiting = FALSE;
       self.backButton.tintColor = [self colorFromHexString:_browserOptions.navigationbuttoncolor];
     }
 
-    // Filter out Navigation Buttons if user requests so
-    if (_browserOptions.hidenavigationbuttons) {
-        if (_browserOptions.lefttoright) {
-            [self.toolbar setItems:@[flexibleSpaceButton, self.closeButton]];
+    NSDictionary *attributes = @{NSFontAttributeName: [UIFont systemFontOfSize:24]};
+    NSString* reloadCircleString = NSLocalizedString(@"↻", nil); // create reload circle from Unicode char
+    self.reloadButton = [[UIBarButtonItem alloc] initWithTitle:reloadCircleString style:UIBarButtonItemStylePlain target:self action:@selector(doReload:)];
+    [self.reloadButton setTitleTextAttributes:attributes forState:UIControlStateNormal];
+    [self.reloadButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];
+    self.reloadButton.enabled = YES;
+    self.reloadButton.imageInsets = UIEdgeInsetsZero;
+    if (_browserOptions.navigationbuttoncolor != nil) { // Set button color if user sets it in options
+      self.reloadButton.tintColor = [self colorFromHexString:_browserOptions.navigationbuttoncolor];
+    }
+
+    if (_browserOptions.navigationbar) {
+        UIFont *navButtonsFont = [UIFont fontWithName:@"Verdana" size:30];
+        NSDictionary *navButtonAttributes = @{NSFontAttributeName: navButtonsFont};
+        // Make the back and forward button font size bigger
+        [self.backButton setTitleTextAttributes:navButtonAttributes forState:UIControlStateNormal];
+        [self.backButton setTitleTextAttributes:navButtonAttributes forState:UIControlStateHighlighted];
+        [self.backButton setTitleTextAttributes:navButtonAttributes forState:UIControlStateDisabled];
+        [self.forwardButton setTitleTextAttributes:navButtonAttributes forState:UIControlStateNormal];
+        [self.forwardButton setTitleTextAttributes:navButtonAttributes forState:UIControlStateHighlighted];
+        [self.forwardButton setTitleTextAttributes:navButtonAttributes forState:UIControlStateDisabled];
+
+        if (_browserOptions.hidenavigationbuttons) {
+            [self.toolbar setItems:@[flexibleSpaceButton, self.reloadButton]];
         } else {
-            [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton]];
+            [self.toolbar setItems:@[self.backButton, fixedSpaceButton, self.forwardButton, flexibleSpaceButton, self.reloadButton]];
         }
-    } else if (_browserOptions.lefttoright) {
-        [self.toolbar setItems:@[self.backButton, fixedSpaceButton, self.forwardButton, flexibleSpaceButton, self.closeButton]];
     } else {
-        [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton, self.backButton, fixedSpaceButton, self.forwardButton]];
+        // Filter out Navigation Buttons if user requests so
+        if (_browserOptions.hidenavigationbuttons) {
+            if (_browserOptions.lefttoright) {
+                [self.toolbar setItems:@[flexibleSpaceButton, self.closeButton]];
+            } else {
+                [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton]];
+            }
+        } else if (_browserOptions.lefttoright) {
+            [self.toolbar setItems:@[self.backButton, fixedSpaceButton, self.forwardButton, flexibleSpaceButton, self.closeButton]];
+        } else {
+            [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton, self.backButton, fixedSpaceButton, self.forwardButton]];
+        }
     }
     
     self.view.backgroundColor = [UIColor clearColor];
@@ -988,9 +1019,12 @@ BOOL isExiting = FALSE;
     // If color on closebutton is requested then initialize with that that color, otherwise use initialize with default
     self.closeButton.tintColor = colorString != nil ? [self colorFromHexString:colorString] : [UIColor colorWithRed:60.0 / 255.0 green:136.0 / 255.0 blue:230.0 / 255.0 alpha:1];
     
-    NSMutableArray* items = [self.toolbar.items mutableCopy];
-    [items replaceObjectAtIndex:buttonIndex withObject:self.closeButton];
-    [self.toolbar setItems:items];
+    // Replace the old close button with new title if it's in the toolbar
+    if (!_browserOptions.navigationbar) {
+        NSMutableArray* items = [self.toolbar.items mutableCopy];
+        [items replaceObjectAtIndex:buttonIndex withObject:self.closeButton];
+        [self.toolbar setItems:items];
+    }
 }
 
 - (void)showLocationBar:(BOOL)show
@@ -1047,6 +1081,39 @@ BOOL isExiting = FALSE;
     }
 }
 
+- (void)showNavigationBar:(BOOL)show
+{
+    // prevent double show/hide
+    if (show == !(self.addressLabel.hidden)) {
+        return;
+    }
+
+    if (show) {
+        self.navigationController.navigationBarHidden = NO;
+
+        // Get the navigation bar
+        UINavigationBar *navBar = self.navigationController.navigationBar;
+
+        // Style the navigation bar
+        UINavigationBarAppearance *appearance = [UINavigationBarAppearance new];
+        [appearance configureWithOpaqueBackground];
+        navBar.standardAppearance = appearance;
+        navBar.scrollEdgeAppearance = appearance;
+
+        // Set done button in navigation bar
+        UIBarButtonItemAppearance *doneButtonAppearance = [[UIBarButtonItemAppearance alloc] initWithStyle:UIBarButtonItemStyleDone];
+        navBar.standardAppearance.doneButtonAppearance = doneButtonAppearance;
+        navBar.scrollEdgeAppearance.doneButtonAppearance = doneButtonAppearance;
+        self.navigationItem.leftBarButtonItem = self.closeButton;
+
+        // Set webViewBounds
+        CGRect webViewBounds = self.view.bounds;
+        webViewBounds.size.height -= navBar.frame.size.height;
+        webViewBounds.origin.y += navBar.frame.size.height;
+        [self setWebViewFrame:webViewBounds];
+    }
+}
+
 - (void)showToolBar:(BOOL)show : (NSString *) toolbarPosition
 {
     CGRect toolbarFrame = self.toolbar.frame;
@@ -1055,6 +1122,7 @@ BOOL isExiting = FALSE;
     BOOL locationbarVisible = !self.addressLabel.hidden;
     BOOL bannerVisible = !self.bannerTextView.hidden;
     float bannerHeight = bannerVisible ? self.bannerTextView.frame.size.height : 0;
+    float navigationBarHeight = self.navigationController.navigationBarHidden ? 0 : self.navigationController.navigationBar.frame.size.height;
     
     // prevent double show/hide
     if (show == !(self.toolbar.hidden)) {
@@ -1080,7 +1148,7 @@ BOOL isExiting = FALSE;
         }
         
         if ([toolbarPosition isEqualToString:kInAppBrowserToolbarBarPositionTop]) {
-            toolbarFrame.origin.y = bannerHeight;
+            toolbarFrame.origin.y = bannerHeight + navigationBarHeight;
             webViewBounds.origin.y += (toolbarFrame.size.height + bannerHeight);
             [self setWebViewFrame:webViewBounds];
         } else {
@@ -1134,6 +1202,8 @@ BOOL isExiting = FALSE;
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    self.title = _webView.title;
+    self.automaticallyAdjustsScrollViewInsets = NO;
 }
 
 - (void)viewDidDisappear:(BOOL)animated
@@ -1197,6 +1267,11 @@ BOOL isExiting = FALSE;
     [self.webView goForward];
 }
 
+- (void)doReload:(id)sender
+{
+    [self.webView reload];
+}
+
 - (void)viewWillAppear:(BOOL)animated
 {
     [self rePositionViews];
@@ -1221,6 +1296,7 @@ BOOL isExiting = FALSE;
 - (void) rePositionViews {
     CGRect viewBounds = [self.webView bounds];
     CGFloat statusBarHeight = [self getStatusBarOffset];
+    float navigationBarHeight = self.navigationController.navigationBarHidden ? 0 : self.navigationController.navigationBar.frame.size.height;
     
     // orientation portrait or portraitUpsideDown: status bar is on the top and web view is to be aligned to the bottom of the status bar
     // orientation landscapeLeft or landscapeRight: status bar height is 0 in but lets account for it in case things ever change in the future
@@ -1232,18 +1308,22 @@ BOOL isExiting = FALSE;
 
     if (_browserOptions.banner) {
         CGSize sizeThatFitsTextView = [self.bannerTextView sizeThatFits:CGSizeMake(self.bannerTextView.frame.size.width, CGFLOAT_MAX)];
-        self.bannerTextView.frame = CGRectMake(self.bannerTextView.frame.origin.x, statusBarHeight, self.bannerTextView.frame.size.width, sizeThatFitsTextView.height);
+        self.bannerTextView.frame = CGRectMake(self.bannerTextView.frame.origin.x, navigationBarHeight + statusBarHeight, self.bannerTextView.frame.size.width, sizeThatFitsTextView.height);
 
         viewBounds.origin.y += self.bannerTextView.frame.size.height;
 
-        viewBounds.size.height = viewBounds.size.height - self.bannerTextView.frame.size.height;
-        lastReducedStatusBarHeight = lastReducedStatusBarHeight + self.bannerTextView.frame.size.height;
+        viewBounds.size.height -= self.bannerTextView.frame.size.height;
+        lastReducedStatusBarHeight += self.bannerTextView.frame.size.height;
     }
     
     if ((_browserOptions.toolbar) && ([_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop])) {
         // if we have to display the toolbar on top of the web view, we need to account for its height
         viewBounds.origin.y += TOOLBAR_HEIGHT;
-        self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, _browserOptions ? self.bannerTextView.frame.size.height + statusBarHeight : statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
+        self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, _browserOptions ? self.bannerTextView.frame.size.height + navigationBarHeight + statusBarHeight : statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
+    }
+
+    if (_browserOptions.navigationbar) {
+        viewBounds.origin.y += navigationBarHeight;
     }
     
     self.webView.frame = viewBounds;
@@ -1297,6 +1377,7 @@ BOOL isExiting = FALSE;
     // update url, stop spinner, update back/forward
     
     self.addressLabel.text = [self.currentURL absoluteString];
+    self.title = [@"🔒" stringByAppendingString:theWebView.title];
     self.backButton.enabled = theWebView.canGoBack;
     self.forwardButton.enabled = theWebView.canGoForward;
     theWebView.scrollView.contentInset = UIEdgeInsetsZero;

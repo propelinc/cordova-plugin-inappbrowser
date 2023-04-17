@@ -62,10 +62,11 @@
 @property (nonatomic, strong) IBOutlet UIBarButtonItem* closeButton;
 @property (nonatomic, strong) IBOutlet UILabel* addressLabel;
 @property (nonatomic, strong) IBOutlet UIBarButtonItem* backButton;
-@property (nonatomic, strong) IBOutlet UITextView* bannerTextView;
 @property (nonatomic, strong) IBOutlet UIBarButtonItem* forwardButton;
+@property (nonatomic, strong) IBOutlet UIBarButtonItem* reloadButton;
 @property (nonatomic, strong) IBOutlet UIActivityIndicatorView* spinner;
 @property (nonatomic, strong) IBOutlet UIToolbar* toolbar;
+@property (nonatomic, strong) IBOutlet UITextView* bannerTextView;
 @property (nonatomic, strong) IBOutlet CDVWKInAppBrowserUIDelegate* webViewUIDelegate;
 
 @property (nonatomic, weak) id <CDVScreenOrientationDelegate> orientationDelegate;
@@ -75,6 +76,7 @@
 - (void)close;
 - (void)navigateTo:(NSURL*)url;
 - (void)showLocationBar:(BOOL)show;
+- (void)showNavigationBar:(BOOL)show;
 - (void)showToolBar:(BOOL)show : (NSString *) toolbarPosition;
 - (void)showBanner:(BOOL)show;
 - (void)setCloseButtonTitle:(NSString*)title : (NSString*) colorString : (int) buttonIndex;
