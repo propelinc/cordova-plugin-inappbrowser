@@ -129,6 +129,8 @@ public class InAppBrowser extends CordovaPlugin {
 
     private static final String BANNER_TAPPED_EVENT = "bannertapped";
 
+    private static final String SHOW_NAVIGATION_BAR = "navigationbar";
+
     private static final List customizableOptions = Arrays.asList(
         CLOSE_BUTTON_CAPTION,
         TOOLBAR_COLOR,
@@ -177,6 +179,9 @@ public class InAppBrowser extends CordovaPlugin {
     private int bannerTextColor = android.graphics.Color.BLACK;
     private int bannerTextSize = 16;
     private String bannerMessageText = "";
+
+    private TextView pageTitleTextView;
+    private boolean showNavigationBar = false;
 
     /**
      * Executes the request and returns PluginResult.
@@ -374,6 +379,16 @@ public class InAppBrowser extends CordovaPlugin {
             PluginResult pluginResult = new PluginResult(PluginResult.Status.OK);
             pluginResult.setKeepCallback(true);
             this.callbackContext.sendPluginResult(pluginResult);
+        }
+        else if (action.equals("reload")) {
+            if (inAppWebView != null) {
+                this.cordova.getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        inAppWebView.reload();
+                    }
+                });
+            }
         }
         else {
             return false;
@@ -633,6 +648,12 @@ public class InAppBrowser extends CordovaPlugin {
         }
     }
 
+    private void doReload(){
+        if (this.inAppWebView != null) {
+            inAppWebView.reload();
+        }
+    }
+
     /**
      * Navigate to the new page
      *
@@ -658,6 +679,15 @@ public class InAppBrowser extends CordovaPlugin {
      */
     private boolean getShowLocationBar() {
         return this.showLocationBar;
+    }
+
+    /**
+     * Should we show the navigation bar?
+     *
+     * @return boolean
+     */
+    private boolean getShowNavigationBar() {
+        return this.showNavigationBar;
     }
 
     private InAppBrowser getInAppBrowser() {
@@ -776,6 +806,11 @@ public class InAppBrowser extends CordovaPlugin {
             String bannerMessageSet = features.get(BANNER_MESSAGE);
             if (bannerMessageSet != null) {
                 bannerMessageText = bannerMessageSet;
+            }
+
+            String showNavigationBarSet = features.get(SHOW_NAVIGATION_BAR);
+            if (showNavigationBarSet != null) {
+                showNavigationBar = showNavigationBarSet.equals("yes") ? true : false;
             }
         }
 
@@ -943,6 +978,36 @@ public class InAppBrowser extends CordovaPlugin {
                     }
                 });
 
+                // Add the back and forward buttons to our action button container layout
+                actionButtonContainer.addView(back);
+                actionButtonContainer.addView(forward);
+
+                // Reload button
+                ImageButton reload = new ImageButton(cordova.getActivity());
+                RelativeLayout.LayoutParams reloadLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
+                reloadLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+                reload.setLayoutParams(reloadLayoutParams);
+                reload.setContentDescription("Reload Button");
+                reload.setId(Integer.valueOf(4));
+                int rldResId = activityRes.getIdentifier("arrow_rotate_right", "drawable", cordova.getActivity().getPackageName());
+                Drawable rldIcon = activityRes.getDrawable(rldResId);
+                if (navigationButtonColor != "") reload.setColorFilter(android.graphics.Color.parseColor(navigationButtonColor));
+                if (Build.VERSION.SDK_INT >= 16)
+                    reload.setBackground(null);
+                else
+                    reload.setBackgroundDrawable(null);
+                reload.setImageDrawable(rldIcon);
+                reload.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                reload.setPadding(0, this.dpToPixels(10), this.dpToPixels(16), this.dpToPixels(10));
+                if (Build.VERSION.SDK_INT >= 16)
+                    reload.getAdjustViewBounds();
+
+                reload.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        doReload();
+                    }
+                });
+
                 // Edit Text Box
                 edittext = new EditText(cordova.getActivity());
                 RelativeLayout.LayoutParams textLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
@@ -966,11 +1031,31 @@ public class InAppBrowser extends CordovaPlugin {
                     }
                 });
 
+                // Navigation bar layout
+                RelativeLayout navigationBar = new RelativeLayout(cordova.getActivity());
+                navigationBar.setBackgroundColor(toolbarColor);
+                navigationBar.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(44)));
+                navigationBar.setPadding(this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2));
+                navigationBar.setVerticalGravity(Gravity.CENTER);
+                navigationBar.setHorizontalGravity(Gravity.LEFT);
+
+                // Add page title for navigation bar
+                pageTitleTextView = new TextView(cordova.getActivity());
+                LinearLayout.LayoutParams pageTitleTextViewLayoutParams = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
+                pageTitleTextView.setLayoutParams(pageTitleTextViewLayoutParams);
+                pageTitleTextView.setText("Loading...");
+                pageTitleTextView.setTextSize(bannerTextSize);
+                pageTitleTextView.setTextColor(android.graphics.Color.parseColor(navigationButtonColor));
+                int lockResId = activityRes.getIdentifier("lock", "drawable", cordova.getActivity().getPackageName());
+                Drawable lockIcon = activityRes.getDrawable(lockResId);
+                pageTitleTextView.setCompoundDrawablesWithIntrinsicBounds(lockIcon, null, null, null);
+                pageTitleTextView.setCompoundDrawablePadding(this.dpToPixels(8));
+                pageTitleTextView.setGravity(Gravity.CENTER_VERTICAL);
+                pageTitleTextView.setPadding(this.dpToPixels(20), 0, 0, 0);
 
                 // Header Close/Done button
                 int closeButtonId = leftToRight ? 1 : 5;
                 View close = createCloseButton(closeButtonId);
-                toolbar.addView(close);
 
                 // Footer
                 RelativeLayout footer = new RelativeLayout(cordova.getActivity());
@@ -980,7 +1065,7 @@ public class InAppBrowser extends CordovaPlugin {
                 } else {
                     _footerColor = android.graphics.Color.LTGRAY;
                 }
-                footer.setBackgroundColor(_footerColor);
+                footer.setBackgroundColor(getShowNavigationBar() ? toolbarColor : _footerColor);
                 RelativeLayout.LayoutParams footerLayout = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(44));
                 footerLayout.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
                 footer.setLayoutParams(footerLayout);
@@ -989,7 +1074,7 @@ public class InAppBrowser extends CordovaPlugin {
                 footer.setVerticalGravity(Gravity.BOTTOM);
 
                 View footerClose = createCloseButton(7);
-                footer.addView(footerClose);
+                if (!getShowNavigationBar()) footer.addView(footerClose);
 
 
                 // WebView
@@ -1108,18 +1193,26 @@ public class InAppBrowser extends CordovaPlugin {
                 inAppWebView.requestFocus();
                 inAppWebView.requestFocusFromTouch();
 
-                // Add the back and forward buttons to our action button container layout
-                actionButtonContainer.addView(back);
-                actionButtonContainer.addView(forward);
-
-                // Add the views to our toolbar if they haven't been disabled
-                if (!hideNavigationButtons) toolbar.addView(actionButtonContainer);
-                if (!hideUrlBar) toolbar.addView(edittext);
-
-                // Don't add the toolbar if its been disabled
-                if (getShowLocationBar()) {
-                    // Add our toolbar to our main view/layout
-                    main.addView(toolbar);
+                // Put the header and footer together
+                if (getShowNavigationBar()) {
+                    navigationBar.addView(close);
+                    navigationBar.addView(pageTitleTextView);
+                    main.addView(navigationBar);
+                    if (!hideNavigationButtons) {
+                        actionButtonContainer.setPadding(this.dpToPixels(8), 0, 0, 0);
+                        footer.addView(actionButtonContainer);
+                    }
+                    footer.addView(reload);
+                } else {
+                    toolbar.addView(close);
+                    // Add the views to our toolbar if they haven't been disabled
+                    if (!hideNavigationButtons) toolbar.addView(actionButtonContainer);
+                    if (!hideUrlBar) toolbar.addView(edittext);
+                    // Don't add the toolbar if its been disabled
+                    if (getShowLocationBar()) {
+                        // Add our toolbar to our main view/layout
+                        main.addView(toolbar);
+                    }
                 }
 
                 // Set up the customizable banner.
@@ -1154,7 +1247,7 @@ public class InAppBrowser extends CordovaPlugin {
                 main.addView(webViewLayout);
 
                 // Don't add the footer unless it's been enabled
-                if (showFooter) {
+                if (showFooter || getShowNavigationBar()) {
                     webViewLayout.addView(footer);
                 }
 
@@ -1521,6 +1614,8 @@ public class InAppBrowser extends CordovaPlugin {
 
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
+
+            pageTitleTextView.setText(view.getTitle());
 
             // Set the namespace for postMessage()
             if (Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR1) {
