@@ -34,6 +34,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.net.http.SslError;
 import android.net.Uri;
 import android.os.Build;
@@ -1054,6 +1055,7 @@ public class InAppBrowser extends CordovaPlugin {
                 pageTitleTextView.setText("Loading...");
                 pageTitleTextView.setTextSize(bannerTextSize);
                 pageTitleTextView.setTextColor(android.graphics.Color.parseColor(navigationButtonColor));
+                pageTitleTextView.setTypeface(null, Typeface.BOLD);
                 int lockResId = activityRes.getIdentifier("lock", "drawable", cordova.getActivity().getPackageName());
                 Drawable lockIcon = activityRes.getDrawable(lockResId);
                 pageTitleTextView.setCompoundDrawablesWithIntrinsicBounds(lockIcon, null, null, null);
