@@ -30,6 +30,7 @@ import android.provider.Browser;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.Color;
@@ -1032,8 +1033,15 @@ public class InAppBrowser extends CordovaPlugin {
                 });
 
                 // Navigation bar layout
+                GradientDrawable navigationBarBorderBackground = new GradientDrawable();
+                navigationBarBorderBackground.setColor(toolbarColor);
+                navigationBarBorderBackground.setStroke(1, android.graphics.Color.parseColor("#E9E6E1"));
                 RelativeLayout navigationBar = new RelativeLayout(cordova.getActivity());
-                navigationBar.setBackgroundColor(toolbarColor);
+                if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN) {
+                    navigationBar.setBackgroundDrawable(navigationBarBorderBackground);
+                } else {
+                    navigationBar.setBackground(navigationBarBorderBackground);
+                }
                 navigationBar.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(44)));
                 navigationBar.setPadding(this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2));
                 navigationBar.setVerticalGravity(Gravity.CENTER);
@@ -1058,14 +1066,21 @@ public class InAppBrowser extends CordovaPlugin {
                 View close = createCloseButton(closeButtonId);
 
                 // Footer
-                RelativeLayout footer = new RelativeLayout(cordova.getActivity());
                 int _footerColor;
                 if(footerColor != "") {
                     _footerColor = Color.parseColor(footerColor);
                 } else {
                     _footerColor = android.graphics.Color.LTGRAY;
                 }
-                footer.setBackgroundColor(getShowNavigationBar() ? toolbarColor : _footerColor);
+                GradientDrawable footerBorderBackground = new GradientDrawable();
+                footerBorderBackground.setColor(getShowNavigationBar() ? toolbarColor : _footerColor);
+                footerBorderBackground.setStroke(1, android.graphics.Color.parseColor("#E9E6E1"));
+                RelativeLayout footer = new RelativeLayout(cordova.getActivity());
+                if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN) {
+                    footer.setBackgroundDrawable(footerBorderBackground);
+                } else {
+                    footer.setBackground(footerBorderBackground);
+                }
                 RelativeLayout.LayoutParams footerLayout = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(44));
                 footerLayout.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
                 footer.setLayoutParams(footerLayout);
