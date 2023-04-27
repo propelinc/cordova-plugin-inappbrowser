@@ -950,6 +950,9 @@ BOOL isExiting = FALSE;
         } else {
             [self.toolbar setItems:@[self.backButton, fixedSpaceButton, self.forwardButton, flexibleSpaceButton, self.reloadButton]];
         }
+        UIView *lineView = [[UIView alloc] initWithFrame:CGRectMake(0, [_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop] ? self.toolbar.frame.size.height - 1 : 0, self.view.bounds.size.width, 1)];
+        lineView.backgroundColor = [self colorFromHexString:@"#E9E6E1"];
+        [self.toolbar addSubview:lineView];
     } else {
         // Filter out Navigation Buttons if user requests so
         if (_browserOptions.hidenavigationbuttons) {
