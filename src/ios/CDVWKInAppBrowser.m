@@ -932,45 +932,19 @@ BOOL isExiting = FALSE;
     self.addressLabel.textAlignment = NSTextAlignmentLeft;
     self.addressLabel.textColor = [UIColor colorWithWhite:1.000 alpha:1.000];
     self.addressLabel.userInteractionEnabled = NO;
-    
-    NSString* frontArrowString = NSLocalizedString(@"►", nil); // create arrow from Unicode char
-    self.forwardButton = [[UIBarButtonItem alloc] initWithTitle:frontArrowString style:UIBarButtonItemStylePlain target:self action:@selector(goForward:)];
-    self.forwardButton.enabled = YES;
-    self.forwardButton.imageInsets = UIEdgeInsetsZero;
-    if (_browserOptions.navigationbuttoncolor != nil) { // Set button color if user sets it in options
-      self.forwardButton.tintColor = [self colorFromHexString:_browserOptions.navigationbuttoncolor];
-    }
 
-    NSString* backArrowString = NSLocalizedString(@"◄", nil); // create arrow from Unicode char
-    self.backButton = [[UIBarButtonItem alloc] initWithTitle:backArrowString style:UIBarButtonItemStylePlain target:self action:@selector(goBack:)];
-    self.backButton.enabled = YES;
-    self.backButton.imageInsets = UIEdgeInsetsZero;
-    if (_browserOptions.navigationbuttoncolor != nil) { // Set button color if user sets it in options
-      self.backButton.tintColor = [self colorFromHexString:_browserOptions.navigationbuttoncolor];
-    }
+    self.pageTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(self.navigationItem.titleView.frame.origin.x, self.navigationItem.titleView.frame.origin.y, self.navigationItem.titleView.frame.size.width, self.navigationItem.titleView.frame.size.height)];
 
-    NSDictionary *attributes = @{NSFontAttributeName: [UIFont systemFontOfSize:24]};
-    NSString* reloadCircleString = NSLocalizedString(@"↻", nil); // create reload circle from Unicode char
-    self.reloadButton = [[UIBarButtonItem alloc] initWithTitle:reloadCircleString style:UIBarButtonItemStylePlain target:self action:@selector(doReload:)];
-    [self.reloadButton setTitleTextAttributes:attributes forState:UIControlStateNormal];
-    [self.reloadButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];
-    self.reloadButton.enabled = YES;
-    self.reloadButton.imageInsets = UIEdgeInsetsZero;
-    if (_browserOptions.navigationbuttoncolor != nil) { // Set button color if user sets it in options
-      self.reloadButton.tintColor = [self colorFromHexString:_browserOptions.navigationbuttoncolor];
-    }
+    UIButton *forwardUIButton = [self createButton:@"forward" textFallback:@"►" action:@selector(goForward:) withDescription:@"forward button"];
+    self.forwardButton = [[UIBarButtonItem alloc] initWithCustomView:forwardUIButton];
+
+    UIButton *backUIButton = [self createButton:@"back" textFallback:@"◄" action:@selector(goBack:) withDescription:@"back button"];
+    self.backButton = [[UIBarButtonItem alloc] initWithCustomView:backUIButton];
+
+    UIButton *reloadUIButton = [self createButton:@"reload" textFallback:@"↻" action:@selector(doReload:) withDescription:@"reload button"];
+    self.reloadButton = [[UIBarButtonItem alloc] initWithCustomView:reloadUIButton];
 
     if (_browserOptions.navigationbar) {
-        UIFont *navButtonsFont = [UIFont fontWithName:@"Verdana" size:30];
-        NSDictionary *navButtonAttributes = @{NSFontAttributeName: navButtonsFont};
-        // Make the back and forward button font size bigger
-        [self.backButton setTitleTextAttributes:navButtonAttributes forState:UIControlStateNormal];
-        [self.backButton setTitleTextAttributes:navButtonAttributes forState:UIControlStateHighlighted];
-        [self.backButton setTitleTextAttributes:navButtonAttributes forState:UIControlStateDisabled];
-        [self.forwardButton setTitleTextAttributes:navButtonAttributes forState:UIControlStateNormal];
-        [self.forwardButton setTitleTextAttributes:navButtonAttributes forState:UIControlStateHighlighted];
-        [self.forwardButton setTitleTextAttributes:navButtonAttributes forState:UIControlStateDisabled];
-
         if (_browserOptions.hidenavigationbuttons) {
             [self.toolbar setItems:@[flexibleSpaceButton, self.reloadButton]];
         } else {
@@ -1100,6 +1074,21 @@ BOOL isExiting = FALSE;
         navBar.standardAppearance = appearance;
         navBar.scrollEdgeAppearance = appearance;
 
+        // Custom view for the title
+        UIStackView *customTitleView = [[UIStackView alloc] init];
+        customTitleView.axis = UILayoutConstraintAxisHorizontal;
+        customTitleView.distribution = UIStackViewDistributionEqualSpacing;
+        customTitleView.alignment = UIStackViewAlignmentCenter;
+        customTitleView.spacing = 8;
+        UIImageView *lockIconView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"lock"]];
+        self.pageTitleLabel.text = @"Loading...";
+        [self.pageTitleLabel setFont:[UIFont boldSystemFontOfSize:16]];
+        [self.pageTitleLabel sizeToFit];
+        self.pageTitleLabel.textAlignment = NSTextAlignmentLeft;
+        [customTitleView addArrangedSubview:lockIconView];
+        [customTitleView addArrangedSubview:self.pageTitleLabel];
+        self.navigationItem.titleView = customTitleView;
+
         // Set done button in navigation bar
         UIBarButtonItemAppearance *doneButtonAppearance = [[UIBarButtonItemAppearance alloc] initWithStyle:UIBarButtonItemStyleDone];
         navBar.standardAppearance.doneButtonAppearance = doneButtonAppearance;
@@ -1202,8 +1191,8 @@ BOOL isExiting = FALSE;
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    self.title = _webView.title;
     self.automaticallyAdjustsScrollViewInsets = NO;
+    self.pageTitleLabel.text = _webView.title;
 }
 
 - (void)viewDidDisappear:(BOOL)animated
@@ -1375,9 +1364,8 @@ BOOL isExiting = FALSE;
 - (void)webView:(WKWebView *)theWebView didFinishNavigation:(WKNavigation *)navigation
 {
     // update url, stop spinner, update back/forward
-    
     self.addressLabel.text = [self.currentURL absoluteString];
-    self.title = [@"🔒" stringByAppendingString:theWebView.title];
+    self.pageTitleLabel.text = theWebView.title;
     self.backButton.enabled = theWebView.canGoBack;
     self.forwardButton.enabled = theWebView.canGoForward;
     theWebView.scrollView.contentInset = UIEdgeInsetsZero;
@@ -1455,6 +1443,25 @@ BOOL isExiting = FALSE;
 
 - (void)presentationControllerWillDismiss:(UIPresentationController *)presentationController {
     isExiting = TRUE;
+}
+
+- (UIButton*) createButton:(NSString*)name textFallback:(NSString*)textFallback action:(SEL)action withDescription:(NSString*)description
+{
+    UIButton* result = [UIButton buttonWithType:UIButtonTypeCustom];
+    result.bounds = CGRectMake(0, 0, 30, 30);
+
+    UIImage *buttonImage = [UIImage imageNamed:name];
+    if (!buttonImage) {
+        NSLog([@"createButton - failed to load iamge" stringByAppendingString:name]);
+    }
+
+    NSString *pressedName = [name stringByAppendingString:@"_light"];
+    UIImage *buttonImagePressed = [UIImage imageNamed:pressedName];
+    if (!buttonImagePressed) {
+        NSLog([@"createButton - failed to load image" stringByAppendingString:pressedName]);
+    }
+
+    return result;
 }
 
 @end //CDVWKInAppBrowserViewController

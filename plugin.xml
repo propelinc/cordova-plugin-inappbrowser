@@ -65,6 +65,15 @@
         <resource-file src="src/android/res/drawable-xhdpi/ic_action_remove.png" target="res/drawable-xhdpi/ic_action_remove.png" />
         <resource-file src="src/android/res/drawable-xxhdpi/ic_action_remove.png" target="res/drawable-xxhdpi/ic_action_remove.png" />
 
+        <resource-file src="src/android/res/drawable-hdpi/arrow_rotate_right.png" target="res/drawable-hdpi/arrow_rotate_right.png" />
+        <resource-file src="src/android/res/drawable-mdpi/arrow_rotate_right.png" target="res/drawable-mdpi/arrow_rotate_right.png" />
+        <resource-file src="src/android/res/drawable-xhdpi/arrow_rotate_right.png" target="res/drawable-xhdpi/arrow_rotate_right.png" />
+        <resource-file src="src/android/res/drawable-xxhdpi/arrow_rotate_right.png" target="res/drawable-xxhdpi/arrow_rotate_right.png" />
+
+        <resource-file src="src/android/res/drawable-hdpi/lock.png" target="res/drawable-hdpi/lock.png" />
+        <resource-file src="src/android/res/drawable-mdpi/lock.png" target="res/drawable-mdpi/lock.png" />
+        <resource-file src="src/android/res/drawable-xhdpi/lock.png" target="res/drawable-xhdpi/lock.png" />
+        <resource-file src="src/android/res/drawable-xxhdpi/lock.png" target="res/drawable-xxhdpi/lock.png" />
     </platform>
 
     <!-- ios -->
@@ -86,6 +95,14 @@
 	    <source-file src="src/ios/CDVWKInAppBrowser.m" />
 	    <header-file src="src/ios/CDVWKInAppBrowserUIDelegate.h" />
 	    <source-file src="src/ios/CDVWKInAppBrowserUIDelegate.m" />
+
+        <resource-file src="src/ios/Resources/back_light.png" target="Resources/back_light.png" />
+        <resource-file src="src/ios/Resources/back.png" target="Resources/back.png" />
+        <resource-file src="src/ios/Resources/forward_light.png" target="Resources/forward_light.png" />
+        <resource-file src="src/ios/Resources/forward.png" target="Resources/forward.png" />
+        <resource-file src="src/ios/Resources/reload_light.png" target="Resources/reload_light.png" />
+        <resource-file src="src/ios/Resources/reload.png" target="Resources/reload.png" />
+        <resource-file src="src/ios/Resources/lock.png" target="Resources/lock.png" />
 
 	    <framework src="CoreGraphics.framework" />
     </platform>
