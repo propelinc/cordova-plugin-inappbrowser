@@ -943,14 +943,17 @@ BOOL isExiting = FALSE;
 
     self.pageTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(self.navigationItem.titleView.frame.origin.x, self.navigationItem.titleView.frame.origin.y, self.navigationItem.titleView.frame.size.width, self.navigationItem.titleView.frame.size.height)];
 
-    UIButton *forwardUIButton = [self createButton:@"forward" textFallback:@"►" action:@selector(goForward:) withDescription:@"forward button"];
+    UIButton *forwardUIButton = [self createButton:@"forward" titleFallback:@"►" action:@selector(goForward:) withDescription:@"forward button"];
     self.forwardButton = [[UIBarButtonItem alloc] initWithCustomView:forwardUIButton];
+    self.forwardButton.imageInsets = UIEdgeInsetsZero;
 
-    UIButton *backUIButton = [self createButton:@"back" textFallback:@"◄" action:@selector(goBack:) withDescription:@"back button"];
+    UIButton *backUIButton = [self createButton:@"back" titleFallback:@"◄" action:@selector(goBack:) withDescription:@"back button"];
     self.backButton = [[UIBarButtonItem alloc] initWithCustomView:backUIButton];
+    self.backButton.imageInsets = UIEdgeInsetsZero;
 
-    UIButton *reloadUIButton = [self createButton:@"reload" textFallback:@"↻" action:@selector(doReload:) withDescription:@"reload button"];
+    UIButton *reloadUIButton = [self createButton:@"reload" titleFallback:@"↻" action:@selector(doReload:) withDescription:@"reload button"];
     self.reloadButton = [[UIBarButtonItem alloc] initWithCustomView:reloadUIButton];
+    self.reloadButton.imageInsets = UIEdgeInsetsZero;
 
     if (_browserOptions.navigationbar) {
         if (_browserOptions.hidenavigationbuttons) {
@@ -1456,7 +1459,7 @@ BOOL isExiting = FALSE;
     isExiting = TRUE;
 }
 
-- (UIButton*) createButton:(NSString*)name textFallback:(NSString*)textFallback action:(SEL)action withDescription:(NSString*)description
+- (UIButton*) createButton:(NSString*)name titleFallback:(NSString*)titleFallback action:(SEL)action withDescription:(NSString*)description
 {
     UIButton* result = [UIButton buttonWithType:UIButtonTypeCustom];
     result.bounds = CGRectMake(0, 0, 30, 30);
@@ -1470,6 +1473,19 @@ BOOL isExiting = FALSE;
     UIImage *buttonImagePressed = [UIImage imageNamed:pressedName];
     if (!buttonImagePressed) {
         NSLog([@"createButton - failed to load image" stringByAppendingString:pressedName]);
+    }
+
+    if ((buttonImage) && (buttonImagePressed)) {
+        [result setImage:buttonImagePressed forState:UIControlStateHighlighted];
+        result.adjustsImageWhenHighlighted = NO;
+
+        [result setImage:buttonImage forState:UIControlStateNormal];
+        [result addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
+    } else {
+        [result setTitle:titleFallback forState:UIControlStateNormal];
+        [result setTitle:titleFallback forState:UIControlStateHighlighted];
+        [result setTitleColor:[self colorFromHexString:_browserOptions.navigationbuttoncolor] forState:UIControlStateNormal];
+        [result setTitleColor:[self colorFromHexString:_browserOptions.navigationbuttoncolor] forState:UIControlStateHighlighted];
     }
 
     return result;
