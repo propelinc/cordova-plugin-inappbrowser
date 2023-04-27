@@ -745,9 +745,16 @@ BOOL isExiting = FALSE;
 - (void)createViews
 {
     // We create the views in code for primarily for ease of upgrades and not requiring an external .xib to be included
-    
+    bool isAtLeastiOS11 = false;
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
+    if (@available(iOS 11.0, *)) {
+        isAtLeastiOS11 = true;
+    }
+#endif
+    float safeAreaInsetBottom = isAtLeastiOS11 ? [[[UIApplication sharedApplication] windows] objectAtIndex:0].safeAreaInsets.bottom : 0.0;
     CGRect webViewBounds = self.view.bounds;
     BOOL toolbarIsAtBottom = ![_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
+    webViewBounds.size.height -= safeAreaInsetBottom;
     webViewBounds.size.height -= _browserOptions.location ? FOOTER_HEIGHT : TOOLBAR_HEIGHT;
     WKUserContentController* userContentController = [[WKUserContentController alloc] init];
     
@@ -877,9 +884,10 @@ BOOL isExiting = FALSE;
     tap.delegate = self; 
     tap.numberOfTapsRequired = 1; 
     [self.bannerTextView addGestureRecognizer:tap];
-    
-    float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT : 0;
-    CGRect toolbarFrame = CGRectMake(0.0, toolbarY, self.view.bounds.size.width, TOOLBAR_HEIGHT);
+
+    float toolbarHeight = toolbarIsAtBottom ? TOOLBAR_HEIGHT + safeAreaInsetBottom : TOOLBAR_HEIGHT;
+    float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - toolbarHeight : 0;
+    CGRect toolbarFrame = CGRectMake(0.0, toolbarY, self.view.bounds.size.width, toolbarHeight);
     
     self.toolbar = [[UIToolbar alloc] initWithFrame:toolbarFrame];
     self.toolbar.alpha = 1.000;
@@ -1307,7 +1315,7 @@ BOOL isExiting = FALSE;
         viewBounds.size.height -= self.bannerTextView.frame.size.height;
         lastReducedStatusBarHeight += self.bannerTextView.frame.size.height;
     }
-    
+
     if ((_browserOptions.toolbar) && ([_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop])) {
         // if we have to display the toolbar on top of the web view, we need to account for its height
         viewBounds.origin.y += TOOLBAR_HEIGHT;
