@@ -131,7 +131,7 @@ public class InAppBrowser extends CordovaPlugin {
 
     private static final String BANNER_TAPPED_EVENT = "bannertapped";
 
-    private static final String SHOW_NAVIGATION_BAR = "navigationbar";
+    private static final String SHOW_PAGE_TITLE_HEADER = "pagetitleheader";
 
     private static final List customizableOptions = Arrays.asList(
         CLOSE_BUTTON_CAPTION,
@@ -183,7 +183,7 @@ public class InAppBrowser extends CordovaPlugin {
     private String bannerMessageText = "";
 
     private TextView pageTitleTextView;
-    private boolean showNavigationBar = false;
+    private boolean showPageTitleHeader = false;
 
     /**
      * Executes the request and returns PluginResult.
@@ -674,12 +674,12 @@ public class InAppBrowser extends CordovaPlugin {
     }
 
     /**
-     * Should we show the navigation bar?
+     * Should we show the page title header?
      *
      * @return boolean
      */
-    private boolean getShowNavigationBar() {
-        return this.showNavigationBar;
+    private boolean getShowPageTitleHeader() {
+        return this.showPageTitleHeader;
     }
 
     private InAppBrowser getInAppBrowser() {
@@ -800,8 +800,8 @@ public class InAppBrowser extends CordovaPlugin {
                 bannerMessageText = bannerMessageSet;
             }
 
-            String showNavigationBarSet = features.get(SHOW_NAVIGATION_BAR);
-            showNavigationBar = showNavigationBarSet != null && showNavigationBarSet.equals("yes");
+            String showPageTitleHeaderSet = features.get(SHOW_PAGE_TITLE_HEADER);
+            showPageTitleHeader = showPageTitleHeaderSet != null && showPageTitleHeaderSet.equals("yes");
         }
 
         final CordovaWebView thatWebView = this.webView;
@@ -1021,22 +1021,22 @@ public class InAppBrowser extends CordovaPlugin {
                     }
                 });
 
-                // Navigation bar layout
-                GradientDrawable navigationBarBorderBackground = new GradientDrawable();
-                navigationBarBorderBackground.setColor(toolbarColor);
-                navigationBarBorderBackground.setStroke(1, android.graphics.Color.parseColor("#E9E6E1"));
-                RelativeLayout navigationBar = new RelativeLayout(cordova.getActivity());
+                // Page title header layout
+                GradientDrawable pageTitleHeaderBorderBackground = new GradientDrawable();
+                pageTitleHeaderBorderBackground.setColor(toolbarColor);
+                pageTitleHeaderBorderBackground.setStroke(1, android.graphics.Color.parseColor("#E9E6E1"));
+                RelativeLayout pageTitleHeader = new RelativeLayout(cordova.getActivity());
                 if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN) {
-                    navigationBar.setBackgroundDrawable(navigationBarBorderBackground);
+                    pageTitleHeader.setBackgroundDrawable(pageTitleHeaderBorderBackground);
                 } else {
-                    navigationBar.setBackground(navigationBarBorderBackground);
+                    pageTitleHeader.setBackground(pageTitleHeaderBorderBackground);
                 }
-                navigationBar.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(44)));
-                navigationBar.setPadding(this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2));
-                navigationBar.setVerticalGravity(Gravity.CENTER);
-                navigationBar.setHorizontalGravity(Gravity.LEFT);
+                pageTitleHeader.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(44)));
+                pageTitleHeader.setPadding(this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2));
+                pageTitleHeader.setVerticalGravity(Gravity.CENTER);
+                pageTitleHeader.setHorizontalGravity(Gravity.LEFT);
 
-                // Add page title for navigation bar
+                // Add page title to header
                 pageTitleTextView = new TextView(cordova.getActivity());
                 LinearLayout.LayoutParams pageTitleTextViewLayoutParams = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
                 pageTitleTextView.setLayoutParams(pageTitleTextViewLayoutParams);
@@ -1063,7 +1063,7 @@ public class InAppBrowser extends CordovaPlugin {
                     _footerColor = android.graphics.Color.LTGRAY;
                 }
                 GradientDrawable footerBorderBackground = new GradientDrawable();
-                footerBorderBackground.setColor(getShowNavigationBar() ? toolbarColor : _footerColor);
+                footerBorderBackground.setColor(getShowPageTitleHeader() ? toolbarColor : _footerColor);
                 footerBorderBackground.setStroke(1, android.graphics.Color.parseColor("#E9E6E1"));
                 RelativeLayout footer = new RelativeLayout(cordova.getActivity());
                 if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN) {
@@ -1079,7 +1079,7 @@ public class InAppBrowser extends CordovaPlugin {
                 footer.setVerticalGravity(Gravity.BOTTOM);
 
                 View footerClose = createCloseButton(7);
-                if (!getShowNavigationBar()) footer.addView(footerClose);
+                if (!getShowPageTitleHeader()) footer.addView(footerClose);
 
 
                 // WebView
@@ -1199,10 +1199,10 @@ public class InAppBrowser extends CordovaPlugin {
                 inAppWebView.requestFocusFromTouch();
 
                 // Put the header and footer together
-                if (getShowNavigationBar()) {
-                    navigationBar.addView(close);
-                    navigationBar.addView(pageTitleTextView);
-                    main.addView(navigationBar);
+                if (getShowPageTitleHeader()) {
+                    pageTitleHeader.addView(close);
+                    pageTitleHeader.addView(pageTitleTextView);
+                    main.addView(pageTitleHeader);
                     if (!hideNavigationButtons) {
                         actionButtonContainer.setPadding(this.dpToPixels(8), 0, 0, 0);
                         footer.addView(actionButtonContainer);
@@ -1252,7 +1252,7 @@ public class InAppBrowser extends CordovaPlugin {
                 main.addView(webViewLayout);
 
                 // Don't add the footer unless it's been enabled
-                if (showFooter || getShowNavigationBar()) {
+                if (showFooter || getShowPageTitleHeader()) {
                     webViewLayout.addView(footer);
                 }
 
@@ -1620,7 +1620,7 @@ public class InAppBrowser extends CordovaPlugin {
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
 
-            if (getShowNavigationBar()) {
+            if (getShowPageTitleHeader()) {
                 pageTitleTextView.setText(view.getTitle());
             }
 

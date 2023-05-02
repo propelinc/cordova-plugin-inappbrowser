@@ -257,7 +257,7 @@ static CDVWKInAppBrowser* instance = nil;
     }
 
     // Add views around webView
-    [self.inAppBrowserViewController showNavigationBar:browserOptions.navigationbar];
+    [self.inAppBrowserViewController showPageTitleHeader:browserOptions.pagetitleheader];
     [self.inAppBrowserViewController showBanner:browserOptions.banner];
     [self.inAppBrowserViewController showLocationBar:browserOptions.location];
     [self.inAppBrowserViewController showToolBar:browserOptions.toolbar :browserOptions.toolbarposition];
@@ -884,7 +884,7 @@ BOOL isExiting = FALSE;
     tap.numberOfTapsRequired = 1; 
     [self.bannerTextView addGestureRecognizer:tap];
 
-    float toolbarHeight = (toolbarIsAtBottom && _browserOptions.navigationbar) ? TOOLBAR_HEIGHT + safeAreaInsetBottom : TOOLBAR_HEIGHT;
+    float toolbarHeight = (toolbarIsAtBottom && _browserOptions.pagetitleheader) ? TOOLBAR_HEIGHT + safeAreaInsetBottom : TOOLBAR_HEIGHT;
     float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - toolbarHeight : 0;
     CGRect toolbarFrame = CGRectMake(0.0, toolbarY, self.view.bounds.size.width, toolbarHeight);
     
@@ -954,7 +954,7 @@ BOOL isExiting = FALSE;
     self.reloadButton = [[UIBarButtonItem alloc] initWithCustomView:reloadUIButton];
     self.reloadButton.imageInsets = UIEdgeInsetsZero;
 
-    if (_browserOptions.navigationbar) {
+    if (_browserOptions.pagetitleheader) {
         if (_browserOptions.hidenavigationbuttons) {
             [self.toolbar setItems:@[flexibleSpaceButton, self.reloadButton]];
         } else {
@@ -1007,7 +1007,7 @@ BOOL isExiting = FALSE;
     self.closeButton.tintColor = colorString != nil ? [self colorFromHexString:colorString] : [UIColor colorWithRed:60.0 / 255.0 green:136.0 / 255.0 blue:230.0 / 255.0 alpha:1];
     
     // Replace the old close button with new title if it's in the toolbar
-    if (!_browserOptions.navigationbar) {
+    if (!_browserOptions.pagetitleheader) {
         NSMutableArray* items = [self.toolbar.items mutableCopy];
         [items replaceObjectAtIndex:buttonIndex withObject:self.closeButton];
         [self.toolbar setItems:items];
@@ -1033,7 +1033,7 @@ BOOL isExiting = FALSE;
     }
 }
 
-- (void)showNavigationBar:(BOOL)show
+- (void)showPageTitleHeader:(BOOL)show
 {
     // prevent double show/hide
     if (show == !(self.navigationController.navigationBarHidden)) {
@@ -1088,7 +1088,7 @@ BOOL isExiting = FALSE;
     BOOL locationbarVisible = !self.addressLabel.hidden;
     BOOL bannerVisible = !self.bannerTextView.hidden;
     float bannerHeight = bannerVisible ? self.bannerTextView.frame.size.height : 0;
-    float navigationBarHeight = self.navigationController.navigationBarHidden ? 0 : self.navigationController.navigationBar.frame.size.height;
+    float pageTitleHeaderHeight = self.navigationController.navigationBarHidden ? 0 : self.navigationController.navigationBar.frame.size.height;
     
     // prevent double show/hide
     if (show == !(self.toolbar.hidden)) {
@@ -1099,7 +1099,7 @@ BOOL isExiting = FALSE;
         self.toolbar.hidden = NO;
         
         if (toolbarIsAtTop) {
-            toolbarFrame.origin.y = bannerHeight + navigationBarHeight;
+            toolbarFrame.origin.y = bannerHeight + pageTitleHeaderHeight;
         } else {
             if (locationbarVisible) {
                 // location bar at the bottom, move location bar up and put toolbar at the bottom
@@ -1150,7 +1150,7 @@ BOOL isExiting = FALSE;
 {
     [super viewDidLoad];
     self.automaticallyAdjustsScrollViewInsets = NO;
-    if (_browserOptions.navigationbar) {
+    if (_browserOptions.pagetitleheader) {
         self.pageTitleLabel.text = _webView.title;
     }
 }
@@ -1245,20 +1245,20 @@ BOOL isExiting = FALSE;
 - (void) rePositionViews {
     CGRect webViewBounds = [self.view bounds];
     CGFloat statusBarHeight = [self getStatusBarOffset];
-    float navigationBarHeight = self.navigationController.navigationBarHidden ? 0 : self.navigationController.navigationBar.frame.size.height;
+    float pageTitleHeaderHeight = self.navigationController.navigationBarHidden ? 0 : self.navigationController.navigationBar.frame.size.height;
     
     // orientation portrait or portraitUpsideDown: status bar is on the top and web view is to be aligned to the bottom of the status bar
     // orientation landscapeLeft or landscapeRight: status bar height is 0 in but lets account for it in case things ever change in the future
-    webViewBounds.origin.y = statusBarHeight + navigationBarHeight;
+    webViewBounds.origin.y = statusBarHeight + pageTitleHeaderHeight;
     
     // account for web view height portion that may have been reduced by a previous call to this method
     webViewBounds.size.height = webViewBounds.size.height - statusBarHeight;
 
-    if (_browserOptions.navigationbar) webViewBounds.size.height -= navigationBarHeight;
+    if (_browserOptions.pagetitleheader) webViewBounds.size.height -= pageTitleHeaderHeight;
 
     if (_browserOptions.banner) {
         CGSize sizeThatFitsTextView = [self.bannerTextView sizeThatFits:CGSizeMake(self.bannerTextView.frame.size.width, CGFLOAT_MAX)];
-        self.bannerTextView.frame = CGRectMake(self.bannerTextView.frame.origin.x, navigationBarHeight + statusBarHeight, self.bannerTextView.frame.size.width, sizeThatFitsTextView.height);
+        self.bannerTextView.frame = CGRectMake(self.bannerTextView.frame.origin.x, pageTitleHeaderHeight + statusBarHeight, self.bannerTextView.frame.size.width, sizeThatFitsTextView.height);
 
         webViewBounds.origin.y += self.bannerTextView.frame.size.height;
         webViewBounds.size.height -= self.bannerTextView.frame.size.height;
@@ -1270,7 +1270,7 @@ BOOL isExiting = FALSE;
         if ([_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop]) {
             // if we have to display the toolbar on top of the web view, we need to account for its height
             webViewBounds.origin.y += TOOLBAR_HEIGHT;
-            self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, _browserOptions ? self.bannerTextView.frame.size.height + navigationBarHeight + statusBarHeight : statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
+            self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, _browserOptions ? self.bannerTextView.frame.size.height + pageTitleHeaderHeight + statusBarHeight : statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
         }
         webViewBounds.size.height -= self.toolbar.frame.size.height;
     }
@@ -1325,7 +1325,7 @@ BOOL isExiting = FALSE;
 {
     // update url, stop spinner, update back/forward
     self.addressLabel.text = [self.currentURL absoluteString];
-    if (_browserOptions.navigationbar) {
+    if (_browserOptions.pagetitleheader) {
         self.pageTitleLabel.text = theWebView.title;
     }
     self.backButton.enabled = theWebView.canGoBack;

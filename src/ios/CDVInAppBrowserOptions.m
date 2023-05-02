@@ -51,7 +51,7 @@
         self.bannercolor = nil;
         self.bannertextcolor = nil;
         self.bannertextsize = nil;
-        self.navigationbar = NO;
+        self.pagetitleheader = NO;
     }
 
     return self;

@@ -108,7 +108,7 @@ instance, or the system browser.
   - **bannermessage**: Set a string to insert a message into the banner. The message will only be displayed if `banner=yes`.
   - **bannertextcolor**: Set to a valid hext color string.
   - **bannertextsize**: Set to an integer.
-  - **navigationbar**: Set to `yes` or `no` to turn on a navigation header for the web view. If `yes`, a header with the current page title and close button is added. A reload button replaces the close button in the toolbar.
+  - **pagetitleheader**: Set to `yes` or `no` to diplay the current page title. If `yes`, a header with the current page title and close button is added. A reload button replaces the close button in the toolbar.
 
   Android supports these additional options:
 
