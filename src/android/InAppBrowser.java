@@ -382,16 +382,6 @@ public class InAppBrowser extends CordovaPlugin {
             pluginResult.setKeepCallback(true);
             this.callbackContext.sendPluginResult(pluginResult);
         }
-        else if (action.equals("reload")) {
-            if (inAppWebView != null) {
-                this.cordova.getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        inAppWebView.reload();
-                    }
-                });
-            }
-        }
         else {
             return false;
         }
@@ -652,7 +642,7 @@ public class InAppBrowser extends CordovaPlugin {
 
     private void doReload(){
         if (this.inAppWebView != null) {
-            inAppWebView.reload();
+            this.inAppWebView.reload();
         }
     }
 
@@ -787,11 +777,11 @@ public class InAppBrowser extends CordovaPlugin {
             }
             String fullscreenSet = features.get(FULLSCREEN);
             if (fullscreenSet != null) {
-                fullscreen = fullscreenSet.equals("yes") ? true : false;
+                fullscreen = fullscreenSet.equals("yes");
             }
 
             String showBannerSet = features.get(SHOW_BANNER);
-            showBanner = showBannerSet != null && showBannerSet.equals("yes") ? true : false;
+            showBanner = showBannerSet != null && showBannerSet.equals("yes");
 
             String bannerColorSet = features.get(BANNER_COLOR);
             if (bannerColorSet != null) {
@@ -811,9 +801,7 @@ public class InAppBrowser extends CordovaPlugin {
             }
 
             String showNavigationBarSet = features.get(SHOW_NAVIGATION_BAR);
-            if (showNavigationBarSet != null) {
-                showNavigationBar = showNavigationBarSet.equals("yes") ? true : false;
-            }
+            showNavigationBar = showNavigationBarSet != null && showNavigationBarSet.equals("yes");
         }
 
         final CordovaWebView thatWebView = this.webView;
@@ -1632,7 +1620,9 @@ public class InAppBrowser extends CordovaPlugin {
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
 
-            pageTitleTextView.setText(view.getTitle());
+            if (getShowNavigationBar()) {
+                pageTitleTextView.setText(view.getTitle());
+            }
 
             // Set the namespace for postMessage()
             if (Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR1) {
