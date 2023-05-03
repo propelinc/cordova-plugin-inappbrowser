@@ -642,7 +642,7 @@ public class InAppBrowser extends CordovaPlugin {
 
     private void doReload(){
         if (this.inAppWebView != null) {
-            this.inAppWebView.reload();
+            inAppWebView.reload();
         }
     }
 
