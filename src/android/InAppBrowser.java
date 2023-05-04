@@ -30,9 +30,11 @@ import android.provider.Browser;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.net.http.SslError;
 import android.net.Uri;
 import android.os.Build;
@@ -129,6 +131,8 @@ public class InAppBrowser extends CordovaPlugin {
 
     private static final String BANNER_TAPPED_EVENT = "bannertapped";
 
+    private static final String SHOW_PAGE_TITLE_HEADER = "pagetitleheader";
+
     private static final List customizableOptions = Arrays.asList(
         CLOSE_BUTTON_CAPTION,
         TOOLBAR_COLOR,
@@ -177,6 +181,9 @@ public class InAppBrowser extends CordovaPlugin {
     private int bannerTextColor = android.graphics.Color.BLACK;
     private int bannerTextSize = 16;
     private String bannerMessageText = "";
+
+    private TextView pageTitleTextView;
+    private boolean showPageTitleHeader = false;
 
     /**
      * Executes the request and returns PluginResult.
@@ -633,6 +640,12 @@ public class InAppBrowser extends CordovaPlugin {
         }
     }
 
+    private void doReload(){
+        if (this.inAppWebView != null) {
+            inAppWebView.reload();
+        }
+    }
+
     /**
      * Navigate to the new page
      *
@@ -658,6 +671,15 @@ public class InAppBrowser extends CordovaPlugin {
      */
     private boolean getShowLocationBar() {
         return this.showLocationBar;
+    }
+
+    /**
+     * Should we show the page title header?
+     *
+     * @return boolean
+     */
+    private boolean getShowPageTitleHeader() {
+        return this.showPageTitleHeader;
     }
 
     private InAppBrowser getInAppBrowser() {
@@ -755,11 +777,11 @@ public class InAppBrowser extends CordovaPlugin {
             }
             String fullscreenSet = features.get(FULLSCREEN);
             if (fullscreenSet != null) {
-                fullscreen = fullscreenSet.equals("yes") ? true : false;
+                fullscreen = fullscreenSet.equals("yes");
             }
 
             String showBannerSet = features.get(SHOW_BANNER);
-            showBanner = showBannerSet != null && showBannerSet.equals("yes") ? true : false;
+            showBanner = showBannerSet != null && showBannerSet.equals("yes");
 
             String bannerColorSet = features.get(BANNER_COLOR);
             if (bannerColorSet != null) {
@@ -777,6 +799,9 @@ public class InAppBrowser extends CordovaPlugin {
             if (bannerMessageSet != null) {
                 bannerMessageText = bannerMessageSet;
             }
+
+            String showPageTitleHeaderSet = features.get(SHOW_PAGE_TITLE_HEADER);
+            showPageTitleHeader = showPageTitleHeaderSet != null && showPageTitleHeaderSet.equals("yes");
         }
 
         final CordovaWebView thatWebView = this.webView;
@@ -943,6 +968,36 @@ public class InAppBrowser extends CordovaPlugin {
                     }
                 });
 
+                // Add the back and forward buttons to our action button container layout
+                actionButtonContainer.addView(back);
+                actionButtonContainer.addView(forward);
+
+                // Reload button
+                ImageButton reload = new ImageButton(cordova.getActivity());
+                RelativeLayout.LayoutParams reloadLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
+                reloadLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+                reload.setLayoutParams(reloadLayoutParams);
+                reload.setContentDescription("Reload Button");
+                reload.setId(Integer.valueOf(4));
+                int rldResId = activityRes.getIdentifier("arrow_rotate_right", "drawable", cordova.getActivity().getPackageName());
+                Drawable rldIcon = activityRes.getDrawable(rldResId);
+                if (navigationButtonColor != "") reload.setColorFilter(android.graphics.Color.parseColor(navigationButtonColor));
+                if (Build.VERSION.SDK_INT >= 16)
+                    reload.setBackground(null);
+                else
+                    reload.setBackgroundDrawable(null);
+                reload.setImageDrawable(rldIcon);
+                reload.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                reload.setPadding(0, this.dpToPixels(10), this.dpToPixels(16), this.dpToPixels(10));
+                if (Build.VERSION.SDK_INT >= 16)
+                    reload.getAdjustViewBounds();
+
+                reload.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        doReload();
+                    }
+                });
+
                 // Edit Text Box
                 edittext = new EditText(cordova.getActivity());
                 RelativeLayout.LayoutParams textLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
@@ -966,21 +1021,56 @@ public class InAppBrowser extends CordovaPlugin {
                     }
                 });
 
+                // Page title header layout
+                GradientDrawable pageTitleHeaderBorderBackground = new GradientDrawable();
+                pageTitleHeaderBorderBackground.setColor(toolbarColor);
+                pageTitleHeaderBorderBackground.setStroke(1, android.graphics.Color.parseColor("#E9E6E1"));
+                RelativeLayout pageTitleHeader = new RelativeLayout(cordova.getActivity());
+                if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN) {
+                    pageTitleHeader.setBackgroundDrawable(pageTitleHeaderBorderBackground);
+                } else {
+                    pageTitleHeader.setBackground(pageTitleHeaderBorderBackground);
+                }
+                pageTitleHeader.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(44)));
+                pageTitleHeader.setPadding(this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2));
+                pageTitleHeader.setVerticalGravity(Gravity.CENTER);
+                pageTitleHeader.setHorizontalGravity(Gravity.LEFT);
+
+                // Add page title to header
+                pageTitleTextView = new TextView(cordova.getActivity());
+                LinearLayout.LayoutParams pageTitleTextViewLayoutParams = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
+                pageTitleTextView.setLayoutParams(pageTitleTextViewLayoutParams);
+                pageTitleTextView.setText("Loading...");
+                pageTitleTextView.setTextSize(bannerTextSize);
+                pageTitleTextView.setTextColor(android.graphics.Color.parseColor(navigationButtonColor));
+                pageTitleTextView.setTypeface(null, Typeface.BOLD);
+                int lockResId = activityRes.getIdentifier("lock", "drawable", cordova.getActivity().getPackageName());
+                Drawable lockIcon = activityRes.getDrawable(lockResId);
+                pageTitleTextView.setCompoundDrawablesWithIntrinsicBounds(lockIcon, null, null, null);
+                pageTitleTextView.setCompoundDrawablePadding(this.dpToPixels(8));
+                pageTitleTextView.setGravity(Gravity.CENTER_VERTICAL);
+                pageTitleTextView.setPadding(this.dpToPixels(20), 0, 0, 0);
 
                 // Header Close/Done button
                 int closeButtonId = leftToRight ? 1 : 5;
                 View close = createCloseButton(closeButtonId);
-                toolbar.addView(close);
 
                 // Footer
-                RelativeLayout footer = new RelativeLayout(cordova.getActivity());
                 int _footerColor;
                 if(footerColor != "") {
                     _footerColor = Color.parseColor(footerColor);
                 } else {
                     _footerColor = android.graphics.Color.LTGRAY;
                 }
-                footer.setBackgroundColor(_footerColor);
+                GradientDrawable footerBorderBackground = new GradientDrawable();
+                footerBorderBackground.setColor(getShowPageTitleHeader() ? toolbarColor : _footerColor);
+                footerBorderBackground.setStroke(1, android.graphics.Color.parseColor("#E9E6E1"));
+                RelativeLayout footer = new RelativeLayout(cordova.getActivity());
+                if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN) {
+                    footer.setBackgroundDrawable(footerBorderBackground);
+                } else {
+                    footer.setBackground(footerBorderBackground);
+                }
                 RelativeLayout.LayoutParams footerLayout = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(44));
                 footerLayout.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
                 footer.setLayoutParams(footerLayout);
@@ -989,7 +1079,7 @@ public class InAppBrowser extends CordovaPlugin {
                 footer.setVerticalGravity(Gravity.BOTTOM);
 
                 View footerClose = createCloseButton(7);
-                footer.addView(footerClose);
+                if (!getShowPageTitleHeader()) footer.addView(footerClose);
 
 
                 // WebView
@@ -1108,18 +1198,26 @@ public class InAppBrowser extends CordovaPlugin {
                 inAppWebView.requestFocus();
                 inAppWebView.requestFocusFromTouch();
 
-                // Add the back and forward buttons to our action button container layout
-                actionButtonContainer.addView(back);
-                actionButtonContainer.addView(forward);
-
-                // Add the views to our toolbar if they haven't been disabled
-                if (!hideNavigationButtons) toolbar.addView(actionButtonContainer);
-                if (!hideUrlBar) toolbar.addView(edittext);
-
-                // Don't add the toolbar if its been disabled
-                if (getShowLocationBar()) {
-                    // Add our toolbar to our main view/layout
-                    main.addView(toolbar);
+                // Put the header and footer together
+                if (getShowPageTitleHeader()) {
+                    pageTitleHeader.addView(close);
+                    pageTitleHeader.addView(pageTitleTextView);
+                    main.addView(pageTitleHeader);
+                    if (!hideNavigationButtons) {
+                        actionButtonContainer.setPadding(this.dpToPixels(8), 0, 0, 0);
+                        footer.addView(actionButtonContainer);
+                    }
+                    footer.addView(reload);
+                } else {
+                    toolbar.addView(close);
+                    // Add the views to our toolbar if they haven't been disabled
+                    if (!hideNavigationButtons) toolbar.addView(actionButtonContainer);
+                    if (!hideUrlBar) toolbar.addView(edittext);
+                    // Don't add the toolbar if its been disabled
+                    if (getShowLocationBar()) {
+                        // Add our toolbar to our main view/layout
+                        main.addView(toolbar);
+                    }
                 }
 
                 // Set up the customizable banner.
@@ -1154,7 +1252,7 @@ public class InAppBrowser extends CordovaPlugin {
                 main.addView(webViewLayout);
 
                 // Don't add the footer unless it's been enabled
-                if (showFooter) {
+                if (showFooter || getShowPageTitleHeader()) {
                     webViewLayout.addView(footer);
                 }
 
@@ -1521,6 +1619,10 @@ public class InAppBrowser extends CordovaPlugin {
 
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
+
+            if (getShowPageTitleHeader()) {
+                pageTitleTextView.setText(view.getTitle());
+            }
 
             // Set the namespace for postMessage()
             if (Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR1) {

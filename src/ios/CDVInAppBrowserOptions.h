@@ -51,6 +51,7 @@
 @property (nonatomic, copy) NSString* bannermessage;
 @property (nonatomic, copy) NSString* bannertextcolor;
 @property (nonatomic, copy) NSString* bannertextsize;
+@property (nonatomic, assign) BOOL pagetitleheader;
 
 + (CDVInAppBrowserOptions*)parseOptions:(NSString*)options;
 
