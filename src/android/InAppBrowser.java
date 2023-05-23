@@ -1042,7 +1042,7 @@ public class InAppBrowser extends CordovaPlugin {
                 pageTitleTextView.setLayoutParams(pageTitleTextViewLayoutParams);
                 pageTitleTextView.setText("Loading...");
                 pageTitleTextView.setTextSize(bannerTextSize);
-                pageTitleTextView.setTextColor(android.graphics.Color.parseColor(navigationButtonColor));
+                if (navigationButtonColor != "") pageTitleTextView.setTextColor(android.graphics.Color.parseColor(navigationButtonColor));
                 pageTitleTextView.setTypeface(null, Typeface.BOLD);
                 int lockResId = activityRes.getIdentifier("lock", "drawable", cordova.getActivity().getPackageName());
                 Drawable lockIcon = activityRes.getDrawable(lockResId);
