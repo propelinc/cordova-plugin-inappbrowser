@@ -1045,7 +1045,11 @@ BOOL isExiting = FALSE;
 
         // Style the navigation bar
         UINavigationBarAppearance *appearance = [UINavigationBarAppearance new];
-        [appearance configureWithOpaqueBackground];
+        if (_browserOptions.toolbarcolor != nil) { // Set toolbar color if user sets it in options
+            appearance.backgroundColor = [self colorFromHexString:_browserOptions.toolbarcolor];
+        } else {
+            [appearance configureWithOpaqueBackground];
+        }
         navBar.standardAppearance = appearance;
         navBar.scrollEdgeAppearance = appearance;
 
