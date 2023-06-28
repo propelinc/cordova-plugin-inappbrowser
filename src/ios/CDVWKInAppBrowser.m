@@ -942,15 +942,15 @@ BOOL isExiting = FALSE;
 
     self.pageTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(self.navigationItem.titleView.frame.origin.x, self.navigationItem.titleView.frame.origin.y, self.navigationItem.titleView.frame.size.width, self.navigationItem.titleView.frame.size.height)];
 
-    UIButton *forwardUIButton = [self createButton:@"forward" titleFallback:@"►" action:@selector(goForward:) withDescription:@"forward button"];
+    UIButton *forwardUIButton = [self createNavButton:@"forward" titleFallback:@"►" action:@selector(goForward:) withDescription:@"forward button"];
     self.forwardButton = [[UIBarButtonItem alloc] initWithCustomView:forwardUIButton];
     self.forwardButton.imageInsets = UIEdgeInsetsZero;
 
-    UIButton *backUIButton = [self createButton:@"back" titleFallback:@"◄" action:@selector(goBack:) withDescription:@"back button"];
+    UIButton *backUIButton = [self createNavButton:@"back" titleFallback:@"◄" action:@selector(goBack:) withDescription:@"back button"];
     self.backButton = [[UIBarButtonItem alloc] initWithCustomView:backUIButton];
     self.backButton.imageInsets = UIEdgeInsetsZero;
 
-    UIButton *reloadUIButton = [self createButton:@"reload" titleFallback:@"↻" action:@selector(doReload:) withDescription:@"reload button"];
+    UIButton *reloadUIButton = [self createNavButton:@"reload" titleFallback:@"↻" action:@selector(doReload:) withDescription:@"reload button"];
     self.reloadButton = [[UIBarButtonItem alloc] initWithCustomView:reloadUIButton];
     self.reloadButton.imageInsets = UIEdgeInsetsZero;
 
@@ -1057,8 +1057,7 @@ BOOL isExiting = FALSE;
         customTitleView.axis = UILayoutConstraintAxisHorizontal;
         customTitleView.distribution = UIStackViewDistributionEqualSpacing;
         customTitleView.alignment = UIStackViewAlignmentCenter;
-        customTitleView.spacing = 8;
-        UIImageView *lockIconView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"lock"]];
+        UIImageView *lockIconView = [[UIImageView alloc] initWithImage:[self createIconImage:@"lock.fill" fallbackImageName:@"lock"]];
         self.pageTitleLabel.text = NSLocalizedString(@"Loading...", nil);
         [self.pageTitleLabel setFont:[UIFont boldSystemFontOfSize:16]];
         [self.pageTitleLabel sizeToFit];
@@ -1407,20 +1406,37 @@ BOOL isExiting = FALSE;
     isExiting = TRUE;
 }
 
-- (UIButton*) createButton:(NSString*)name titleFallback:(NSString*)titleFallback action:(SEL)action withDescription:(NSString*)description
+- (UIImage*) createIconImage:(NSString*)systemSymbolName fallbackImageName:(NSString*)fallbackImageName
+{
+    return [self createIconImage:systemSymbolName fallbackImageName:fallbackImageName withTintColor:[UIColor labelColor]];
+}
+
+- (UIImage*) createIconImage:(NSString*)systemSymbolName fallbackImageName:(NSString*)fallbackImageName withTintColor:(UIColor*)color
+{
+    if (@available(iOS 13.0, *)) {
+        // At least iOS 13.0 which means we can use system symbol
+        UIImageSymbolConfiguration * configuration = [UIImageSymbolConfiguration configurationWithScale:UIImageSymbolScaleSmall];
+        return [[UIImage systemImageNamed:systemSymbolName withConfiguration:configuration] imageWithTintColor:color];
+    } else {
+        // Use the fallback image for older versions of iOS
+        return [UIImage imageNamed:fallbackImageName];
+    }
+}
+
+- (UIButton*) createNavButton:(NSString*)name titleFallback:(NSString*)titleFallback action:(SEL)action withDescription:(NSString*)description
 {
     UIButton* result = [UIButton buttonWithType:UIButtonTypeCustom];
     result.bounds = CGRectMake(0, 0, 30, 30);
 
     UIImage *buttonImage = [UIImage imageNamed:name];
     if (!buttonImage) {
-        NSLog([@"createButton - failed to load iamge" stringByAppendingString:name]);
+        NSLog([@"createNavButton - failed to load iamge" stringByAppendingString:name]);
     }
 
     NSString *pressedName = [name stringByAppendingString:@"_light"];
     UIImage *buttonImagePressed = [UIImage imageNamed:pressedName];
     if (!buttonImagePressed) {
-        NSLog([@"createButton - failed to load image" stringByAppendingString:pressedName]);
+        NSLog([@"createNavButton - failed to load image" stringByAppendingString:pressedName]);
     }
 
     if ((buttonImage) && (buttonImagePressed)) {
