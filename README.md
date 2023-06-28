@@ -127,7 +127,7 @@ instance, or the system browser.
   - **hidenavigationbuttons**: set to `yes` to hide the navigation buttons on the location toolbar, only has effect if user has location set to `yes`. The default value is `no`.
   - **hideurlbar**: set to `yes` to hide the url bar on the location toolbar, only has effect if user has location set to `yes`. The default value is `no`.
   - **navigationbuttoncolor**: set to a valid hex color string, for example: `#00ff00`, and it will change the color of both navigation buttons from default. Only has effect if user has location set to `yes` and not hidenavigationbuttons set to `yes`.
-  - **toolbarcolor**: set to a valid hex color string, for example: `#00ff00`, and it will change the color the toolbar from default. Only has effect if user has location set to `yes`.
+  - **toolbarcolor**: set to a valid hex color string, for example: `#00ff00`, and it will change the color the toolbar from default. Only has effect if user has `location` or `pagetitleheader` set to `yes`.
   - **lefttoright**: Set to `yes` to swap positions of the navigation buttons and the close button. Specifically, navigation buttons go to the right and close button to the left. Default value is `no`.
   - **zoom**: set to `yes` to show Android browser's zoom controls, set to `no` to hide them. Default value is `yes`.
   - **mediaPlaybackRequiresUserAction**: Set to `yes` to prevent HTML5 audio or video from autoplaying (defaults to `no`).
@@ -149,6 +149,7 @@ instance, or the system browser.
   - **navigationbuttoncolor**: set as a valid hex color string, for example: `#00ff00`, to change from the default color. Only applicable if navigation buttons are visible.
   - **toolbar**: set to `yes` or `no` to turn the toolbar on or off for the InAppBrowser (defaults to `yes`)
   - **toolbarcolor**: set as a valid hex color string, for example: `#00ff00`, to change from the default color of the toolbar. Only applicable if toolbar is not disabled.
+  - **toolbartextcolor**: set to a valid hex color string and it will change the color of text on the toolbar from default.
   - **toolbartranslucent**: set to `yes` or `no` to make the toolbar translucent(semi-transparent) (defaults to `yes`). Only applicable if toolbar is not disabled.
   - **lefttoright**: Set to `yes` to swap positions of the navigation buttons and the close button. Specifically, close button goes to the right and navigation buttons to the left.
   - **enableViewportScale**: Set to `yes` or `no` to prevent viewport scaling through a meta tag (defaults to `no`).
