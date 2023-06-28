@@ -942,17 +942,14 @@ BOOL isExiting = FALSE;
 
     self.pageTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(self.navigationItem.titleView.frame.origin.x, self.navigationItem.titleView.frame.origin.y, self.navigationItem.titleView.frame.size.width, self.navigationItem.titleView.frame.size.height)];
 
-    UIButton *forwardUIButton = [self createNavButton:@"forward" titleFallback:@"►" action:@selector(goForward:) withDescription:@"forward button"];
-    self.forwardButton = [[UIBarButtonItem alloc] initWithCustomView:forwardUIButton];
-    self.forwardButton.imageInsets = UIEdgeInsetsZero;
-
-    UIButton *backUIButton = [self createNavButton:@"back" titleFallback:@"◄" action:@selector(goBack:) withDescription:@"back button"];
+    UIButton *backUIButton = [self createNavButton:@"chevron.backward" fallbackImageName:@"back" titleFallback:@"◄" action:@selector(goBack:) withDescription:@"back button"];
     self.backButton = [[UIBarButtonItem alloc] initWithCustomView:backUIButton];
-    self.backButton.imageInsets = UIEdgeInsetsZero;
 
-    UIButton *reloadUIButton = [self createNavButton:@"reload" titleFallback:@"↻" action:@selector(doReload:) withDescription:@"reload button"];
+    UIButton *forwardUIButton = [self createNavButton:@"chevron.forward" fallbackImageName:@"forward" titleFallback:@"►" action:@selector(goForward:) withDescription:@"forward button"];
+    self.forwardButton = [[UIBarButtonItem alloc] initWithCustomView:forwardUIButton];
+
+    UIButton *reloadUIButton = [self createNavButton:@"arrow.clockwise" fallbackImageName:@"reload" titleFallback:@"↻" action:@selector(doReload:) withDescription:@"reload button"];
     self.reloadButton = [[UIBarButtonItem alloc] initWithCustomView:reloadUIButton];
-    self.reloadButton.imageInsets = UIEdgeInsetsZero;
 
     if (_browserOptions.pagetitleheader) {
         if (_browserOptions.hidenavigationbuttons) {
@@ -1057,7 +1054,7 @@ BOOL isExiting = FALSE;
         customTitleView.axis = UILayoutConstraintAxisHorizontal;
         customTitleView.distribution = UIStackViewDistributionEqualSpacing;
         customTitleView.alignment = UIStackViewAlignmentCenter;
-        UIImageView *lockIconView = [[UIImageView alloc] initWithImage:[self createIconImage:@"lock.fill" fallbackImageName:@"lock"]];
+        UIImageView *lockIconView = [[UIImageView alloc] initWithImage:[self createSystemSymbolImage:@"lock.fill" fallbackImageName:@"lock" pointSize:12]];
         self.pageTitleLabel.text = NSLocalizedString(@"Loading...", nil);
         [self.pageTitleLabel setFont:[UIFont boldSystemFontOfSize:16]];
         [self.pageTitleLabel sizeToFit];
@@ -1406,51 +1403,49 @@ BOOL isExiting = FALSE;
     isExiting = TRUE;
 }
 
-- (UIImage*) createIconImage:(NSString*)systemSymbolName fallbackImageName:(NSString*)fallbackImageName
+- (UIImage*) createSystemSymbolImage:(NSString*)systemSymbolName fallbackImageName:(NSString*)fallbackImageName pointSize:(CGFloat)pointSize
 {
-    return [self createIconImage:systemSymbolName fallbackImageName:fallbackImageName withTintColor:[UIColor labelColor]];
+    return [self createSystemSymbolImage:systemSymbolName fallbackImageName:fallbackImageName pointSize:pointSize withTintColor:[UIColor labelColor]];
 }
 
-- (UIImage*) createIconImage:(NSString*)systemSymbolName fallbackImageName:(NSString*)fallbackImageName withTintColor:(UIColor*)color
+// See https://developer.apple.com/design/human-interface-guidelines/sf-symbols#app-top
+- (UIImage*) createSystemSymbolImage:(NSString*)systemSymbolName fallbackImageName:(NSString*)fallbackImageName pointSize:(CGFloat)pointSize withTintColor:(UIColor*)color
 {
     if (@available(iOS 13.0, *)) {
         // At least iOS 13.0 which means we can use system symbol
-        UIImageSymbolConfiguration * configuration = [UIImageSymbolConfiguration configurationWithScale:UIImageSymbolScaleSmall];
-        return [[UIImage systemImageNamed:systemSymbolName withConfiguration:configuration] imageWithTintColor:color];
+        UIImageSymbolConfiguration * configuration = [UIImageSymbolConfiguration configurationWithPointSize:pointSize];
+        return [[UIImage systemImageNamed:systemSymbolName withConfiguration:configuration] imageWithTintColor:color renderingMode:UIImageRenderingModeAlwaysOriginal];
     } else {
         // Use the fallback image for older versions of iOS
-        return [UIImage imageNamed:fallbackImageName];
+        UIImage* buttonImage = [UIImage imageNamed:fallbackImageName];
+        if (!buttonImage) {
+            NSLog([@"createSystemSymbolImage - failed to load image" stringByAppendingString:fallbackImageName]);
+        }
+        return buttonImage;
     }
 }
 
-- (UIButton*) createNavButton:(NSString*)name titleFallback:(NSString*)titleFallback action:(SEL)action withDescription:(NSString*)description
+- (UIButton*) createNavButton:(NSString*)systemSymbolName fallbackImageName:(NSString*)fallbackImageName titleFallback:(NSString*)titleFallback action:(SEL)action withDescription:(NSString*)description
 {
     UIButton* result = [UIButton buttonWithType:UIButtonTypeCustom];
     result.bounds = CGRectMake(0, 0, 30, 30);
 
-    UIImage *buttonImage = [UIImage imageNamed:name];
-    if (!buttonImage) {
-        NSLog([@"createNavButton - failed to load iamge" stringByAppendingString:name]);
-    }
+    // At least iOS 13.0 which means we can use system symbol
+    UIColor *color = _browserOptions.navigationbuttoncolor != nil ? [self colorFromHexString:_browserOptions.navigationbuttoncolor] : [UIColor labelColor];
+    UIImage *buttonImage = [self createSystemSymbolImage:systemSymbolName fallbackImageName:fallbackImageName pointSize:24 withTintColor:color];
 
-    NSString *pressedName = [name stringByAppendingString:@"_light"];
-    UIImage *buttonImagePressed = [UIImage imageNamed:pressedName];
-    if (!buttonImagePressed) {
-        NSLog([@"createNavButton - failed to load image" stringByAppendingString:pressedName]);
-    }
+    NSString *fallbackImageNamePressed = [fallbackImageName stringByAppendingString:@"_light"];
+    UIImage *buttonImagePressed = [self createSystemSymbolImage:systemSymbolName fallbackImageName:fallbackImageNamePressed pointSize:24 withTintColor:[color colorWithAlphaComponent:0.9]];
 
     if ((buttonImage) && (buttonImagePressed)) {
+        [result setImage:buttonImage forState:UIControlStateNormal];
         [result setImage:buttonImagePressed forState:UIControlStateHighlighted];
         result.adjustsImageWhenHighlighted = NO;
-
-        [result setImage:buttonImage forState:UIControlStateNormal];
     } else {
         [result setTitle:titleFallback forState:UIControlStateNormal];
         [result setTitle:titleFallback forState:UIControlStateHighlighted];
-        if (_browserOptions.navigationbuttoncolor != nil) {
-            [result setTitleColor:[self colorFromHexString:_browserOptions.navigationbuttoncolor] forState:UIControlStateNormal];
-            [result setTitleColor:[self colorFromHexString:_browserOptions.navigationbuttoncolor] forState:UIControlStateHighlighted];
-        }
+        [result setTitleColor:color forState:UIControlStateNormal];
+        [result setTitleColor:color forState:UIControlStateHighlighted];
     }
     [result addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
 
