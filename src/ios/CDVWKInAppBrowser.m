@@ -958,7 +958,7 @@ BOOL isExiting = FALSE;
             [self.toolbar setItems:@[self.backButton, fixedSpaceButton, self.forwardButton, flexibleSpaceButton, self.reloadButton]];
         }
         UIView *lineView = [[UIView alloc] initWithFrame:CGRectMake(0, [_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop] ? self.toolbar.frame.size.height - 1 : 0, self.view.bounds.size.width, 1)];
-        lineView.backgroundColor = [self colorFromHexString:@"#E9E6E1"];
+        lineView.backgroundColor = [self darkerColorForColor:self.toolbar.barTintColor];
         [self.toolbar addSubview:lineView];
     } else {
         // Filter out Navigation Buttons if user requests so
@@ -1289,6 +1289,18 @@ BOOL isExiting = FALSE;
     [scanner setScanLocation:1]; // bypass '#' character
     [scanner scanHexInt:&rgbValue];
     return [UIColor colorWithRed:((rgbValue & 0xFF0000) >> 16)/255.0 green:((rgbValue & 0xFF00) >> 8)/255.0 blue:(rgbValue & 0xFF)/255.0 alpha:1.0];
+}
+
+// Helper function to return a slightly darker version of UIColor
+- (UIColor *)darkerColorForColor:(UIColor *)c
+{
+    CGFloat r, g, b, a;
+    if ([c getRed:&r green:&g blue:&b alpha:&a])
+        return [UIColor colorWithRed:MAX(r - 0.2, 0.0)
+                               green:MAX(g - 0.2, 0.0)
+                                blue:MAX(b - 0.2, 0.0)
+                               alpha:a];
+    return nil;
 }
 
 #pragma mark WKNavigationDelegate
