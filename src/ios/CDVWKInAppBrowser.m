@@ -869,7 +869,7 @@ BOOL isExiting = FALSE;
     self.bannerTextView.opaque = YES;
     self.bannerTextView.scrollEnabled = NO;
     self.bannerTextView.textAlignment = NSTextAlignmentLeft;
-    self.bannerTextView.textColor = _browserOptions.bannertextcolor != nil ? [self colorFromHexString:_browserOptions.bannertextcolor] : [self colorFromHexString:@"#000000"];
+    self.bannerTextView.textColor = _browserOptions.bannertextcolor != nil ? [self colorFromHexString:_browserOptions.bannertextcolor] : [UIColor labelColor];
     // NOTE: Edge format is top, left, bottom, right.
     self.bannerTextView.textContainerInset = UIEdgeInsetsMake(8, 5, 8, 5);
     self.bannerTextView.userInteractionEnabled = YES;
@@ -942,17 +942,14 @@ BOOL isExiting = FALSE;
 
     self.pageTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(self.navigationItem.titleView.frame.origin.x, self.navigationItem.titleView.frame.origin.y, self.navigationItem.titleView.frame.size.width, self.navigationItem.titleView.frame.size.height)];
 
-    UIButton *forwardUIButton = [self createButton:@"forward" titleFallback:@"►" action:@selector(goForward:) withDescription:@"forward button"];
-    self.forwardButton = [[UIBarButtonItem alloc] initWithCustomView:forwardUIButton];
-    self.forwardButton.imageInsets = UIEdgeInsetsZero;
-
-    UIButton *backUIButton = [self createButton:@"back" titleFallback:@"◄" action:@selector(goBack:) withDescription:@"back button"];
+    UIButton *backUIButton = [self createNavButton:@"chevron.backward" fallbackImageName:@"back" titleFallback:@"◄" action:@selector(goBack:) withDescription:@"back button"];
     self.backButton = [[UIBarButtonItem alloc] initWithCustomView:backUIButton];
-    self.backButton.imageInsets = UIEdgeInsetsZero;
 
-    UIButton *reloadUIButton = [self createButton:@"reload" titleFallback:@"↻" action:@selector(doReload:) withDescription:@"reload button"];
+    UIButton *forwardUIButton = [self createNavButton:@"chevron.forward" fallbackImageName:@"forward" titleFallback:@"►" action:@selector(goForward:) withDescription:@"forward button"];
+    self.forwardButton = [[UIBarButtonItem alloc] initWithCustomView:forwardUIButton];
+
+    UIButton *reloadUIButton = [self createNavButton:@"arrow.clockwise" fallbackImageName:@"reload" titleFallback:@"↻" action:@selector(doReload:) withDescription:@"reload button"];
     self.reloadButton = [[UIBarButtonItem alloc] initWithCustomView:reloadUIButton];
-    self.reloadButton.imageInsets = UIEdgeInsetsZero;
 
     if (_browserOptions.pagetitleheader) {
         if (_browserOptions.hidenavigationbuttons) {
@@ -961,7 +958,7 @@ BOOL isExiting = FALSE;
             [self.toolbar setItems:@[self.backButton, fixedSpaceButton, self.forwardButton, flexibleSpaceButton, self.reloadButton]];
         }
         UIView *lineView = [[UIView alloc] initWithFrame:CGRectMake(0, [_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop] ? self.toolbar.frame.size.height - 1 : 0, self.view.bounds.size.width, 1)];
-        lineView.backgroundColor = [self colorFromHexString:@"#E9E6E1"];
+        lineView.backgroundColor = [self darkerColorForColor:self.toolbar.barTintColor];
         [self.toolbar addSubview:lineView];
     } else {
         // Filter out Navigation Buttons if user requests so
@@ -1048,7 +1045,11 @@ BOOL isExiting = FALSE;
 
         // Style the navigation bar
         UINavigationBarAppearance *appearance = [UINavigationBarAppearance new];
-        [appearance configureWithOpaqueBackground];
+        if (_browserOptions.toolbarcolor != nil) { // Set toolbar color if user sets it in options
+            appearance.backgroundColor = [self colorFromHexString:_browserOptions.toolbarcolor];
+        } else {
+            [appearance configureWithOpaqueBackground];
+        }
         navBar.standardAppearance = appearance;
         navBar.scrollEdgeAppearance = appearance;
 
@@ -1057,12 +1058,13 @@ BOOL isExiting = FALSE;
         customTitleView.axis = UILayoutConstraintAxisHorizontal;
         customTitleView.distribution = UIStackViewDistributionEqualSpacing;
         customTitleView.alignment = UIStackViewAlignmentCenter;
-        customTitleView.spacing = 8;
-        UIImageView *lockIconView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"lock"]];
+        UIColor *toolbarTextColorOrDefault = _browserOptions.toolbartextcolor != nil ? [self colorFromHexString:_browserOptions.toolbartextcolor] : [UIColor labelColor];
+        UIImageView *lockIconView = [[UIImageView alloc] initWithImage:[self createSystemSymbolImage:@"lock.fill" fallbackImageName:@"lock" pointSize:12 withTintColor:toolbarTextColorOrDefault]];
         self.pageTitleLabel.text = NSLocalizedString(@"Loading...", nil);
         [self.pageTitleLabel setFont:[UIFont boldSystemFontOfSize:16]];
         [self.pageTitleLabel sizeToFit];
         self.pageTitleLabel.textAlignment = NSTextAlignmentLeft;
+        self.pageTitleLabel.textColor = toolbarTextColorOrDefault;
         [customTitleView addArrangedSubview:lockIconView];
         [customTitleView addArrangedSubview:self.pageTitleLabel];
         self.navigationItem.titleView = customTitleView;
@@ -1289,6 +1291,18 @@ BOOL isExiting = FALSE;
     return [UIColor colorWithRed:((rgbValue & 0xFF0000) >> 16)/255.0 green:((rgbValue & 0xFF00) >> 8)/255.0 blue:(rgbValue & 0xFF)/255.0 alpha:1.0];
 }
 
+// Helper function to return a slightly darker version of UIColor
+- (UIColor *)darkerColorForColor:(UIColor *)c
+{
+    CGFloat r, g, b, a;
+    if ([c getRed:&r green:&g blue:&b alpha:&a])
+        return [UIColor colorWithRed:MAX(r - 0.2, 0.0)
+                               green:MAX(g - 0.2, 0.0)
+                                blue:MAX(b - 0.2, 0.0)
+                               alpha:a];
+    return nil;
+}
+
 #pragma mark WKNavigationDelegate
 
 - (void)webView:(WKWebView *)theWebView didStartProvisionalNavigation:(WKNavigation *)navigation{
@@ -1407,34 +1421,49 @@ BOOL isExiting = FALSE;
     isExiting = TRUE;
 }
 
-- (UIButton*) createButton:(NSString*)name titleFallback:(NSString*)titleFallback action:(SEL)action withDescription:(NSString*)description
+- (UIImage*) createSystemSymbolImage:(NSString*)systemSymbolName fallbackImageName:(NSString*)fallbackImageName pointSize:(CGFloat)pointSize
+{
+    return [self createSystemSymbolImage:systemSymbolName fallbackImageName:fallbackImageName pointSize:pointSize withTintColor:[UIColor labelColor]];
+}
+
+// See https://developer.apple.com/design/human-interface-guidelines/sf-symbols#app-top
+- (UIImage*) createSystemSymbolImage:(NSString*)systemSymbolName fallbackImageName:(NSString*)fallbackImageName pointSize:(CGFloat)pointSize withTintColor:(UIColor*)color
+{
+    if (@available(iOS 13.0, *)) {
+        // At least iOS 13.0 which means we can use system symbol
+        UIImageSymbolConfiguration * configuration = [UIImageSymbolConfiguration configurationWithPointSize:pointSize];
+        return [[UIImage systemImageNamed:systemSymbolName withConfiguration:configuration] imageWithTintColor:color renderingMode:UIImageRenderingModeAlwaysOriginal];
+    } else {
+        // Use the fallback image for older versions of iOS
+        UIImage* buttonImage = [UIImage imageNamed:fallbackImageName];
+        if (!buttonImage) {
+            NSLog([@"createSystemSymbolImage - failed to load image" stringByAppendingString:fallbackImageName]);
+        }
+        return buttonImage;
+    }
+}
+
+- (UIButton*) createNavButton:(NSString*)systemSymbolName fallbackImageName:(NSString*)fallbackImageName titleFallback:(NSString*)titleFallback action:(SEL)action withDescription:(NSString*)description
 {
     UIButton* result = [UIButton buttonWithType:UIButtonTypeCustom];
     result.bounds = CGRectMake(0, 0, 30, 30);
 
-    UIImage *buttonImage = [UIImage imageNamed:name];
-    if (!buttonImage) {
-        NSLog([@"createButton - failed to load iamge" stringByAppendingString:name]);
-    }
+    // At least iOS 13.0 which means we can use system symbol
+    UIColor *color = _browserOptions.navigationbuttoncolor != nil ? [self colorFromHexString:_browserOptions.navigationbuttoncolor] : [UIColor labelColor];
+    UIImage *buttonImage = [self createSystemSymbolImage:systemSymbolName fallbackImageName:fallbackImageName pointSize:24 withTintColor:color];
 
-    NSString *pressedName = [name stringByAppendingString:@"_light"];
-    UIImage *buttonImagePressed = [UIImage imageNamed:pressedName];
-    if (!buttonImagePressed) {
-        NSLog([@"createButton - failed to load image" stringByAppendingString:pressedName]);
-    }
+    NSString *fallbackImageNamePressed = [fallbackImageName stringByAppendingString:@"_light"];
+    UIImage *buttonImagePressed = [self createSystemSymbolImage:systemSymbolName fallbackImageName:fallbackImageNamePressed pointSize:24 withTintColor:[color colorWithAlphaComponent:0.9]];
 
     if ((buttonImage) && (buttonImagePressed)) {
+        [result setImage:buttonImage forState:UIControlStateNormal];
         [result setImage:buttonImagePressed forState:UIControlStateHighlighted];
         result.adjustsImageWhenHighlighted = NO;
-
-        [result setImage:buttonImage forState:UIControlStateNormal];
     } else {
         [result setTitle:titleFallback forState:UIControlStateNormal];
         [result setTitle:titleFallback forState:UIControlStateHighlighted];
-        if (_browserOptions.navigationbuttoncolor != nil) {
-            [result setTitleColor:[self colorFromHexString:_browserOptions.navigationbuttoncolor] forState:UIControlStateNormal];
-            [result setTitleColor:[self colorFromHexString:_browserOptions.navigationbuttoncolor] forState:UIControlStateHighlighted];
-        }
+        [result setTitleColor:color forState:UIControlStateNormal];
+        [result setTitleColor:color forState:UIControlStateHighlighted];
     }
     [result addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
 
