@@ -1031,7 +1031,7 @@ public class InAppBrowser extends CordovaPlugin {
                 // Page title header layout
                 GradientDrawable pageTitleHeaderBorderBackground = new GradientDrawable();
                 pageTitleHeaderBorderBackground.setColor(toolbarColor);
-                pageTitleHeaderBorderBackground.setStroke(1, manipulateColor(toolbarColor, 0.8f));
+                pageTitleHeaderBorderBackground.setStroke(1, darkerColorForColor(toolbarColor));
                 RelativeLayout pageTitleHeader = new RelativeLayout(cordova.getActivity());
                 if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN) {
                     pageTitleHeader.setBackgroundDrawable(pageTitleHeaderBorderBackground);
@@ -1073,7 +1073,7 @@ public class InAppBrowser extends CordovaPlugin {
                 GradientDrawable footerBorderBackground = new GradientDrawable();
                 int footerBorderBackgroundColor = getShowPageTitleHeader() ? toolbarColor : _footerColor;
                 footerBorderBackground.setColor(footerBorderBackgroundColor);
-                footerBorderBackground.setStroke(1,  manipulateColor(footerBorderBackgroundColor, 0.8f));
+                footerBorderBackground.setStroke(1, darkerColorForColor(footerBorderBackgroundColor));
                 RelativeLayout footer = new RelativeLayout(cordova.getActivity());
                 if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN) {
                     footer.setBackgroundDrawable(footerBorderBackground);
@@ -1325,15 +1325,12 @@ public class InAppBrowser extends CordovaPlugin {
         return false;
     }
 
-    private static int manipulateColor(int color, float factor) {
+    private static int darkerColorForColor(int color) {
         int a = Color.alpha(color);
-        int r = Math.round(Color.red(color) * factor);
-        int g = Math.round(Color.green(color) * factor);
-        int b = Math.round(Color.blue(color) * factor);
         return Color.argb(a,
-                Math.min(r,255),
-                Math.min(g,255),
-                Math.min(b,255));
+                Math.max(Color.red(color) - 51, 0),
+                Math.max(Color.green(color) - 51, 0),
+                Math.max(Color.blue(color) - 51, 0));
     }
 
     /**
