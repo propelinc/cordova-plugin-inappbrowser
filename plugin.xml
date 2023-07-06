@@ -95,15 +95,6 @@
 	    <source-file src="src/ios/CDVWKInAppBrowser.m" />
 	    <header-file src="src/ios/CDVWKInAppBrowserUIDelegate.h" />
 	    <source-file src="src/ios/CDVWKInAppBrowserUIDelegate.m" />
-
-        <resource-file src="src/ios/Resources/back_light.png" target="Resources/back_light.png" />
-        <resource-file src="src/ios/Resources/back.png" target="Resources/back.png" />
-        <resource-file src="src/ios/Resources/forward_light.png" target="Resources/forward_light.png" />
-        <resource-file src="src/ios/Resources/forward.png" target="Resources/forward.png" />
-        <resource-file src="src/ios/Resources/reload_light.png" target="Resources/reload_light.png" />
-        <resource-file src="src/ios/Resources/reload.png" target="Resources/reload.png" />
-        <resource-file src="src/ios/Resources/lock.png" target="Resources/lock.png" />
-
 	    <framework src="CoreGraphics.framework" />
     </platform>
 

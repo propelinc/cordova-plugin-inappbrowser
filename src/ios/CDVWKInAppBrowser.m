@@ -139,64 +139,27 @@ static CDVWKInAppBrowser* instance = nil;
     }
     
     if (browserOptions.clearcache) {
-        bool isAtLeastiOS11 = false;
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
-        if (@available(iOS 11.0, *)) {
-            isAtLeastiOS11 = true;
-        }
-#endif
-            
-        if(isAtLeastiOS11){
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
-            // Deletes all cookies
-            WKHTTPCookieStore* cookieStore = dataStore.httpCookieStore;
-            [cookieStore getAllCookies:^(NSArray* cookies) {
-                NSHTTPCookie* cookie;
-                for(cookie in cookies){
-                    [cookieStore deleteCookie:cookie completionHandler:nil];
-                }
-            }];
-#endif
-        }else{
-            // https://stackoverflow.com/a/31803708/777265
-            // Only deletes domain cookies (not session cookies)
-            [dataStore fetchDataRecordsOfTypes:[WKWebsiteDataStore allWebsiteDataTypes]
-             completionHandler:^(NSArray<WKWebsiteDataRecord *> * __nonnull records) {
-                 for (WKWebsiteDataRecord *record  in records){
-                     NSSet<NSString*>* dataTypes = record.dataTypes;
-                     if([dataTypes containsObject:WKWebsiteDataTypeCookies]){
-                         [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:record.dataTypes
-                               forDataRecords:@[record]
-                               completionHandler:^{}];
-                     }
-                 }
-             }];
-        }
+        // Deletes all cookies
+        WKHTTPCookieStore* cookieStore = dataStore.httpCookieStore;
+        [cookieStore getAllCookies:^(NSArray* cookies) {
+            NSHTTPCookie* cookie;
+            for(cookie in cookies){
+                [cookieStore deleteCookie:cookie completionHandler:nil];
+            }
+        }];
     }
     
     if (browserOptions.clearsessioncache) {
-        bool isAtLeastiOS11 = false;
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
-        if (@available(iOS 11.0, *)) {
-            isAtLeastiOS11 = true;
-        }
-#endif
-        if (isAtLeastiOS11) {
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
-            // Deletes session cookies
-            WKHTTPCookieStore* cookieStore = dataStore.httpCookieStore;
-            [cookieStore getAllCookies:^(NSArray* cookies) {
-                NSHTTPCookie* cookie;
-                for(cookie in cookies){
-                    if(cookie.sessionOnly){
-                        [cookieStore deleteCookie:cookie completionHandler:nil];
-                    }
+        // Deletes session cookies
+        WKHTTPCookieStore* cookieStore = dataStore.httpCookieStore;
+        [cookieStore getAllCookies:^(NSArray* cookies) {
+            NSHTTPCookie* cookie;
+            for(cookie in cookies){
+                if(cookie.sessionOnly){
+                    [cookieStore deleteCookie:cookie completionHandler:nil];
                 }
-            }];
-#endif
-        }else{
-            NSLog(@"clearsessioncache not available below iOS 11.0");
-        }
+            }
+        }];
     }
 
     if (self.inAppBrowserViewController == nil) {
@@ -308,20 +271,16 @@ static CDVWKInAppBrowser* instance = nil;
     // Run later to avoid the "took a long time" log message.
     dispatch_async(dispatch_get_main_queue(), ^{
         if (weakSelf.inAppBrowserViewController != nil) {
-            float osVersion = [[[UIDevice currentDevice] systemVersion] floatValue];
             __strong __typeof(weakSelf) strongSelf = weakSelf;
             if (!strongSelf->tmpWindow) {
                 CGRect frame = [[UIScreen mainScreen] bounds];
-                if(initHidden && osVersion < 11){
-                   frame.origin.x = -10000;
-                }
                 strongSelf->tmpWindow = [[UIWindow alloc] initWithFrame:frame];
             }
             UIViewController *tmpController = [[UIViewController alloc] init];
             [strongSelf->tmpWindow setRootViewController:tmpController];
             [strongSelf->tmpWindow setWindowLevel:UIWindowLevelNormal];
 
-            if(!initHidden || osVersion < 11){
+            if(!initHidden){
                 [self->tmpWindow makeKeyAndVisible];
             }
             [tmpController presentViewController:nav animated:!noAnimate completion:nil];
@@ -695,13 +654,10 @@ static CDVWKInAppBrowser* instance = nil;
     self->tmpWindow.hidden = YES;
     self->tmpWindow = nil;
 
-    if (IsAtLeastiOSVersion(@"7.0")) {
-        if (_previousStatusBarStyle != -1) {
-            [[UIApplication sharedApplication] setStatusBarStyle:_previousStatusBarStyle];
-            
-        }
+    if (_previousStatusBarStyle != -1) {
+        [[UIApplication sharedApplication] setStatusBarStyle:_previousStatusBarStyle];        
     }
-    
+
     _previousStatusBarStyle = -1; // this value was reset before reapplying it. caused statusbar to stay black on ios7
 }
 
@@ -746,13 +702,7 @@ BOOL isExiting = FALSE;
 - (void)createViews
 {
     // We create the views in code for primarily for ease of upgrades and not requiring an external .xib to be included
-    bool isAtLeastiOS11 = false;
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
-    if (@available(iOS 11.0, *)) {
-        isAtLeastiOS11 = true;
-    }
-#endif
-    float safeAreaInsetBottom = isAtLeastiOS11 ? [[[UIApplication sharedApplication] windows] objectAtIndex:0].safeAreaInsets.bottom : 0.0;
+    float safeAreaInsetBottom = [[[UIApplication sharedApplication] windows] objectAtIndex:0].safeAreaInsets.bottom;
     BOOL toolbarIsAtBottom = ![_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
     WKUserContentController* userContentController = [[WKUserContentController alloc] init];
     
@@ -776,27 +726,19 @@ BOOL isExiting = FALSE;
     
     //WKWebView options
     configuration.allowsInlineMediaPlayback = _browserOptions.allowinlinemediaplayback;
-    if (IsAtLeastiOSVersion(@"10.0")) {
-        configuration.ignoresViewportScaleLimits = _browserOptions.enableviewportscale;
-        if(_browserOptions.mediaplaybackrequiresuseraction == YES){
-            configuration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeAll;
-        }else{
-            configuration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeNone;
-        }
-    }else{ // iOS 9
-        configuration.mediaPlaybackRequiresUserAction = _browserOptions.mediaplaybackrequiresuseraction;
+    configuration.ignoresViewportScaleLimits = _browserOptions.enableviewportscale;
+    if(_browserOptions.mediaplaybackrequiresuseraction == YES){
+        configuration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeAll;
+    }else{
+        configuration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeNone;
     }
-    
-    if (@available(iOS 13.0, *)) {
-        NSString *contentMode = [self settingForKey:@"PreferredContentMode"];
-        if ([contentMode isEqual: @"mobile"]) {
-            configuration.defaultWebpagePreferences.preferredContentMode = WKContentModeMobile;
-        } else if ([contentMode  isEqual: @"desktop"]) {
-            configuration.defaultWebpagePreferences.preferredContentMode = WKContentModeDesktop;
-        }
-        
+
+    NSString *contentMode = [self settingForKey:@"PreferredContentMode"];
+    if ([contentMode isEqual: @"mobile"]) {
+        configuration.defaultWebpagePreferences.preferredContentMode = WKContentModeMobile;
+    } else if ([contentMode  isEqual: @"desktop"]) {
+        configuration.defaultWebpagePreferences.preferredContentMode = WKContentModeDesktop;
     }
-    
 
     self.webView = [[WKWebView alloc] initWithFrame:self.view.bounds configuration:configuration];
     
@@ -821,13 +763,8 @@ BOOL isExiting = FALSE;
     [self.webView setAutoresizingMask:UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth];
     self.webView.allowsLinkPreview = NO;
     self.webView.allowsBackForwardNavigationGestures = NO;
-    
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
-   if (@available(iOS 11.0, *)) {
-       [self.webView.scrollView setContentInsetAdjustmentBehavior:UIScrollViewContentInsetAdjustmentNever];
-   }
-#endif
-    
+    [self.webView.scrollView setContentInsetAdjustmentBehavior:UIScrollViewContentInsetAdjustmentNever];
+
     self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
     self.spinner.alpha = 1.000;
     self.spinner.autoresizesSubviews = YES;
@@ -942,13 +879,13 @@ BOOL isExiting = FALSE;
 
     self.pageTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(self.navigationItem.titleView.frame.origin.x, self.navigationItem.titleView.frame.origin.y, self.navigationItem.titleView.frame.size.width, self.navigationItem.titleView.frame.size.height)];
 
-    UIButton *backUIButton = [self createNavButton:@"chevron.backward" fallbackImageName:@"back" titleFallback:@"◄" action:@selector(goBack:) withDescription:@"back button"];
+    UIButton *backUIButton = [self createNavButton:@"chevron.backward" titleFallback:@"◄" action:@selector(goBack:) withDescription:@"back button"];
     self.backButton = [[UIBarButtonItem alloc] initWithCustomView:backUIButton];
 
-    UIButton *forwardUIButton = [self createNavButton:@"chevron.forward" fallbackImageName:@"forward" titleFallback:@"►" action:@selector(goForward:) withDescription:@"forward button"];
+    UIButton *forwardUIButton = [self createNavButton:@"chevron.forward" titleFallback:@"►" action:@selector(goForward:) withDescription:@"forward button"];
     self.forwardButton = [[UIBarButtonItem alloc] initWithCustomView:forwardUIButton];
 
-    UIButton *reloadUIButton = [self createNavButton:@"arrow.clockwise" fallbackImageName:@"reload" titleFallback:@"↻" action:@selector(doReload:) withDescription:@"reload button"];
+    UIButton *reloadUIButton = [self createNavButton:@"arrow.clockwise" titleFallback:@"↻" action:@selector(doReload:) withDescription:@"reload button"];
     self.reloadButton = [[UIBarButtonItem alloc] initWithCustomView:reloadUIButton];
 
     if (_browserOptions.pagetitleheader) {
@@ -1059,7 +996,7 @@ BOOL isExiting = FALSE;
         customTitleView.distribution = UIStackViewDistributionEqualSpacing;
         customTitleView.alignment = UIStackViewAlignmentCenter;
         UIColor *toolbarTextColorOrDefault = _browserOptions.toolbartextcolor != nil ? [self colorFromHexString:_browserOptions.toolbartextcolor] : [UIColor labelColor];
-        UIImageView *lockIconView = [[UIImageView alloc] initWithImage:[self createSystemSymbolImage:@"lock.fill" fallbackImageName:@"lock" pointSize:12 withTintColor:toolbarTextColorOrDefault]];
+        UIImageView *lockIconView = [[UIImageView alloc] initWithImage:[self createSystemSymbolImage:@"lock.fill" pointSize:12 withTintColor:toolbarTextColorOrDefault]];
         self.pageTitleLabel.text = NSLocalizedString(@"Loading...", nil);
         [self.pageTitleLabel setFont:[UIFont boldSystemFontOfSize:16]];
         [self.pageTitleLabel sizeToFit];
@@ -1235,18 +1172,9 @@ BOOL isExiting = FALSE;
     [self.navigationDelegate sendBannerTappedEvent:currentURL];
 }
 
-//
-// On iOS 7 the status bar is part of the view's dimensions, therefore it's height has to be taken into account.
-// The height of it could be hardcoded as 20 pixels, but that would assume that the upcoming releases of iOS won't
-// change that value.
-//
-- (float) getStatusBarOffset {
-    return (float) IsAtLeastiOSVersion(@"7.0") ? [[UIApplication sharedApplication] statusBarFrame].size.height : 0.0;
-}
-
 - (void) rePositionViews {
     CGRect webViewBounds = [self.view bounds];
-    CGFloat statusBarHeight = [self getStatusBarOffset];
+    CGFloat statusBarHeight = [[UIApplication sharedApplication] statusBarFrame].size.height;
     float pageTitleHeaderHeight = self.navigationController.navigationBarHidden ? 0 : self.navigationController.navigationBar.frame.size.height;
     
     // orientation portrait or portraitUpsideDown: status bar is on the top and web view is to be aligned to the bottom of the status bar
@@ -1421,39 +1349,26 @@ BOOL isExiting = FALSE;
     isExiting = TRUE;
 }
 
-- (UIImage*) createSystemSymbolImage:(NSString*)systemSymbolName fallbackImageName:(NSString*)fallbackImageName pointSize:(CGFloat)pointSize
+- (UIImage*) createSystemSymbolImage:(NSString*)systemSymbolName pointSize:(CGFloat)pointSize
 {
-    return [self createSystemSymbolImage:systemSymbolName fallbackImageName:fallbackImageName pointSize:pointSize withTintColor:[UIColor labelColor]];
+    return [self createSystemSymbolImage:systemSymbolName pointSize:pointSize withTintColor:[UIColor labelColor]];
 }
 
 // See https://developer.apple.com/design/human-interface-guidelines/sf-symbols#app-top
-- (UIImage*) createSystemSymbolImage:(NSString*)systemSymbolName fallbackImageName:(NSString*)fallbackImageName pointSize:(CGFloat)pointSize withTintColor:(UIColor*)color
+- (UIImage*) createSystemSymbolImage:(NSString*)systemSymbolName pointSize:(CGFloat)pointSize withTintColor:(UIColor*)color
 {
-    if (@available(iOS 13.0, *)) {
-        // At least iOS 13.0 which means we can use system symbol
-        UIImageSymbolConfiguration * configuration = [UIImageSymbolConfiguration configurationWithPointSize:pointSize];
-        return [[UIImage systemImageNamed:systemSymbolName withConfiguration:configuration] imageWithTintColor:color renderingMode:UIImageRenderingModeAlwaysOriginal];
-    } else {
-        // Use the fallback image for older versions of iOS
-        UIImage* buttonImage = [UIImage imageNamed:fallbackImageName];
-        if (!buttonImage) {
-            NSLog([@"createSystemSymbolImage - failed to load image" stringByAppendingString:fallbackImageName]);
-        }
-        return buttonImage;
-    }
+    UIImageSymbolConfiguration * configuration = [UIImageSymbolConfiguration configurationWithPointSize:pointSize];
+    return [[UIImage systemImageNamed:systemSymbolName withConfiguration:configuration] imageWithTintColor:color renderingMode:UIImageRenderingModeAlwaysOriginal];
 }
 
-- (UIButton*) createNavButton:(NSString*)systemSymbolName fallbackImageName:(NSString*)fallbackImageName titleFallback:(NSString*)titleFallback action:(SEL)action withDescription:(NSString*)description
+- (UIButton*) createNavButton:(NSString*)systemSymbolName titleFallback:(NSString*)titleFallback action:(SEL)action withDescription:(NSString*)description
 {
     UIButton* result = [UIButton buttonWithType:UIButtonTypeCustom];
     result.bounds = CGRectMake(0, 0, 30, 30);
 
-    // At least iOS 13.0 which means we can use system symbol
     UIColor *color = _browserOptions.navigationbuttoncolor != nil ? [self colorFromHexString:_browserOptions.navigationbuttoncolor] : [UIColor labelColor];
-    UIImage *buttonImage = [self createSystemSymbolImage:systemSymbolName fallbackImageName:fallbackImageName pointSize:24 withTintColor:color];
-
-    NSString *fallbackImageNamePressed = [fallbackImageName stringByAppendingString:@"_light"];
-    UIImage *buttonImagePressed = [self createSystemSymbolImage:systemSymbolName fallbackImageName:fallbackImageNamePressed pointSize:24 withTintColor:[color colorWithAlphaComponent:0.9]];
+    UIImage *buttonImage = [self createSystemSymbolImage:systemSymbolName pointSize:24 withTintColor:color];
+    UIImage *buttonImagePressed = [self createSystemSymbolImage:systemSymbolName pointSize:24 withTintColor:[color colorWithAlphaComponent:0.9]];
 
     if ((buttonImage) && (buttonImagePressed)) {
         [result setImage:buttonImage forState:UIControlStateNormal];
