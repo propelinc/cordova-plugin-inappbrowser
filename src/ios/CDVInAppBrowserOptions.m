@@ -43,7 +43,6 @@
         self.closebuttoncolor = nil;
         self.lefttoright = false;
         self.toolbarcolor = nil;
-        self.toolbartextcolor = nil;
         self.toolbartranslucent = YES;
         self.beforeload = @"";
 

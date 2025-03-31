@@ -112,7 +112,6 @@ public class InAppBrowser extends CordovaPlugin {
     private static final Boolean DEFAULT_HARDWARE_BACK = true;
     private static final String USER_WIDE_VIEW_PORT = "useWideViewPort";
     private static final String TOOLBAR_COLOR = "toolbarcolor";
-    private static final String TOOLBAR_TEXT_COLOR = "toolbartextcolor";
     private static final String CLOSE_BUTTON_CAPTION = "closebuttoncaption";
     private static final String CLOSE_BUTTON_COLOR = "closebuttoncolor";
     private static final String LEFT_TO_RIGHT = "lefttoright";
@@ -137,7 +136,6 @@ public class InAppBrowser extends CordovaPlugin {
     private static final List customizableOptions = Arrays.asList(
         CLOSE_BUTTON_CAPTION,
         TOOLBAR_COLOR,
-        TOOLBAR_TEXT_COLOR,
         NAVIGATION_COLOR,
         CLOSE_BUTTON_COLOR,
         FOOTER_COLOR,
@@ -166,7 +164,6 @@ public class InAppBrowser extends CordovaPlugin {
     private String closeButtonColor = "";
     private boolean leftToRight = false;
     private int toolbarColor = android.graphics.Color.LTGRAY;
-    private int toolbarTextColor = android.graphics.Color.LTGRAY;
     private boolean hideNavigationButtons = false;
     private String navigationButtonColor = "";
     private boolean hideUrlBar = false;
@@ -757,10 +754,6 @@ public class InAppBrowser extends CordovaPlugin {
             if (toolbarColorSet != null) {
                 toolbarColor = android.graphics.Color.parseColor(toolbarColorSet);
             }
-            String toolbarTextColorSet = features.get(TOOLBAR_TEXT_COLOR);
-            if (toolbarTextColorSet != null) {
-                toolbarTextColor = android.graphics.Color.parseColor(toolbarTextColorSet);
-            }
             String navigationButtonColorSet = features.get(NAVIGATION_COLOR);
             if (navigationButtonColorSet != null) {
                 navigationButtonColor = navigationButtonColorSet;
@@ -1012,7 +1005,7 @@ public class InAppBrowser extends CordovaPlugin {
                 // Page title header layout
                 GradientDrawable pageTitleHeaderBorderBackground = new GradientDrawable();
                 pageTitleHeaderBorderBackground.setColor(toolbarColor);
-                pageTitleHeaderBorderBackground.setStroke(1, darkerColorForColor(toolbarColor));
+                pageTitleHeaderBorderBackground.setStroke(1, android.graphics.Color.parseColor("#E9E6E1"));
                 RelativeLayout pageTitleHeader = new RelativeLayout(cordova.getActivity());
                 if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN) {
                     pageTitleHeader.setBackgroundDrawable(pageTitleHeaderBorderBackground);
@@ -1030,11 +1023,10 @@ public class InAppBrowser extends CordovaPlugin {
                 pageTitleTextView.setLayoutParams(pageTitleTextViewLayoutParams);
                 pageTitleTextView.setText("Loading...");
                 pageTitleTextView.setTextSize(bannerTextSize);
-                pageTitleTextView.setTextColor(toolbarTextColor);
+                if (navigationButtonColor != "") pageTitleTextView.setTextColor(android.graphics.Color.parseColor(navigationButtonColor));
                 pageTitleTextView.setTypeface(null, Typeface.BOLD);
                 int lockResId = activityRes.getIdentifier("lock", "drawable", cordova.getActivity().getPackageName());
                 Drawable lockIcon = activityRes.getDrawable(lockResId);
-                lockIcon.setTint(toolbarTextColor);
                 pageTitleTextView.setCompoundDrawablesWithIntrinsicBounds(lockIcon, null, null, null);
                 pageTitleTextView.setCompoundDrawablePadding(this.dpToPixels(8));
                 pageTitleTextView.setGravity(Gravity.CENTER_VERTICAL);
@@ -1052,9 +1044,8 @@ public class InAppBrowser extends CordovaPlugin {
                     _footerColor = android.graphics.Color.LTGRAY;
                 }
                 GradientDrawable footerBorderBackground = new GradientDrawable();
-                int footerBorderBackgroundColor = getShowPageTitleHeader() ? toolbarColor : _footerColor;
-                footerBorderBackground.setColor(footerBorderBackgroundColor);
-                footerBorderBackground.setStroke(1, darkerColorForColor(footerBorderBackgroundColor));
+                footerBorderBackground.setColor(getShowPageTitleHeader() ? toolbarColor : _footerColor);
+                footerBorderBackground.setStroke(1, android.graphics.Color.parseColor("#E9E6E1"));
                 RelativeLayout footer = new RelativeLayout(cordova.getActivity());
                 if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN) {
                     footer.setBackgroundDrawable(footerBorderBackground);
@@ -1301,14 +1292,6 @@ public class InAppBrowser extends CordovaPlugin {
             LOG.e(LOG_TAG, "URI passed in has caused a JSON error.");
         }
         return false;
-    }
-
-    private static int darkerColorForColor(int color) {
-        int a = Color.alpha(color);
-        return Color.argb(a,
-                Math.max(Color.red(color) - 51, 0),
-                Math.max(Color.green(color) - 51, 0),
-                Math.max(Color.blue(color) - 51, 0));
     }
 
     /**
