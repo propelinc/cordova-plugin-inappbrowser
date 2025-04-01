@@ -122,7 +122,7 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String FOOTER_COLOR = "footercolor";
     private static final String BEFORELOAD = "beforeload";
     private static final String FULLSCREEN = "fullscreen";
-    private static final int TOOLBAR_HEIGHT = 48;
+    private static final int TOOLBAR_HEIGHT = 44;
     private static final String SHOW_BANNER = "banner";
     private static final String BANNER_COLOR = "bannercolor";
     private static final String BANNER_TEXT_COLOR = "bannertextcolor";
