@@ -878,7 +878,7 @@ BOOL isExiting = FALSE;
     UIBarButtonItem* flexibleSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
     
     UIBarButtonItem* fixedSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
-    fixedSpaceButton.width = 20;
+    fixedSpaceButton.width = 12;
 
     CGRect bannerFrame = CGRectMake(0.0, 0.0, self.view.bounds.size.width, 0.0);
     self.bannerTextView = [[UITextView alloc] initWithFrame:bannerFrame];
@@ -930,6 +930,15 @@ BOOL isExiting = FALSE;
     self.toolbar.translucent = NO;
     self.toolbar.barTintColor = barColor;
     self.toolbar.backgroundColor = barColor;
+    // Use UIToolbarAppearance to force opaque and prevent Liquid Glass on iOS 26+
+    UIToolbarAppearance *toolbarAppearance = [[UIToolbarAppearance alloc] init];
+    [toolbarAppearance configureWithOpaqueBackground];
+    toolbarAppearance.backgroundColor = barColor;
+    self.toolbar.standardAppearance = toolbarAppearance;
+    self.toolbar.compactAppearance = toolbarAppearance;
+    if (@available(iOS 15.0, *)) {
+        self.toolbar.scrollEdgeAppearance = toolbarAppearance;
+    }
     if (_browserOptions.toolbartranslucent) {
       self.toolbar.translucent = YES;
     }
@@ -984,6 +993,14 @@ BOOL isExiting = FALSE;
 
     UIButton *reloadUIButton = [self createNavButton:@"arrow.clockwise" fallbackImageName:@"reload" titleFallback:@"↻" action:@selector(doReload:) withDescription:@"reload button"];
     self.reloadButton = [[UIBarButtonItem alloc] initWithCustomView:reloadUIButton];
+
+    // Opt out of Liquid Glass pill grouping on iOS 26+
+    if (@available(iOS 26.0, *)) {
+        self.closeButton.hidesSharedBackground = YES;
+        self.backButton.hidesSharedBackground = YES;
+        self.forwardButton.hidesSharedBackground = YES;
+        self.reloadButton.hidesSharedBackground = YES;
+    }
 
     if (_browserOptions.pagetitleheader) {
         if (_browserOptions.hidenavigationbuttons) {
@@ -1062,6 +1079,9 @@ BOOL isExiting = FALSE;
     self.closeButton.tintColor = colorString != nil ? [self colorFromHexString:colorString] : [UIColor blackColor];
     [self.closeButton setTitleTextAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:CLOSE_BUTTON_FONT_SIZE]} forState:UIControlStateNormal];
     [self.closeButton setTitleTextAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:CLOSE_BUTTON_FONT_SIZE]} forState:UIControlStateHighlighted];
+    if (@available(iOS 26.0, *)) {
+        self.closeButton.hidesSharedBackground = YES;
+    }
 
     // Replace the old close button with new title if it's in the toolbar
     if (!_browserOptions.pagetitleheader) {
@@ -1518,7 +1538,8 @@ BOOL isExiting = FALSE;
 - (UIButton*) createNavButton:(NSString*)systemSymbolName fallbackImageName:(NSString*)fallbackImageName titleFallback:(NSString*)titleFallback action:(SEL)action withDescription:(NSString*)description
 {
     UIButton* result = [UIButton buttonWithType:UIButtonTypeCustom];
-    result.bounds = CGRectMake(0, 0, 30, 30);
+    result.bounds = CGRectMake(0, 0, 24, 24);
+    result.contentEdgeInsets = UIEdgeInsetsZero;
 
     // At least iOS 13.0 which means we can use system symbol
     UIColor *color = _browserOptions.navigationbuttoncolor != nil ? [self colorFromHexString:_browserOptions.navigationbuttoncolor] : [UIColor blackColor];
