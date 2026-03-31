@@ -39,6 +39,12 @@
 #define    TOOLBAR_HEIGHT 44.0
 #define    LOCATIONBAR_HEIGHT 21.0
 #define    FOOTER_HEIGHT ((TOOLBAR_HEIGHT) + (LOCATIONBAR_HEIGHT))
+#define    CLOSE_BUTTON_FONT_SIZE 16.0
+#define    ADDRESS_LABEL_FONT_SIZE 12.0
+#define    CONTENT_HORIZONTAL_PADDING 16.0
+
+static inline UIColor* DefaultBarColor(void) { return [UIColor colorWithRed:0.949 green:0.949 blue:0.969 alpha:1.0]; }
+static inline UIColor* BorderColor(void) { return [UIColor colorWithRed:0.9 green:0.9 blue:0.9 alpha:1.0]; }
 
 #pragma mark CDVWKInAppBrowser
 
@@ -256,6 +262,11 @@ static CDVWKInAppBrowser* instance = nil;
         [self show:nil withNoAnimate:browserOptions.hidden];
     }
 
+    // Set banner text before showing so showBanner can check message length
+    if (browserOptions.bannermessage.length > 0) {
+        [self.inAppBrowserViewController setBannerTextViewText:browserOptions.bannermessage];
+    }
+
     // Add views around webView
     [self.inAppBrowserViewController showPageTitleHeader:browserOptions.pagetitleheader];
     [self.inAppBrowserViewController showBanner:browserOptions.banner];
@@ -265,10 +276,6 @@ static CDVWKInAppBrowser* instance = nil;
     if (browserOptions.closebuttoncaption != nil || browserOptions.closebuttoncolor != nil) {
         int closeButtonIndex = browserOptions.lefttoright ? (browserOptions.hidenavigationbuttons ? 1 : 4) : 0;
         [self.inAppBrowserViewController setCloseButtonTitle:browserOptions.closebuttoncaption :browserOptions.closebuttoncolor :closeButtonIndex];
-    }
-
-    if (browserOptions.banner && browserOptions.bannermessage != @"") {
-        [self.inAppBrowserViewController setBannerTextViewText:browserOptions.bannermessage];
     }
 }
 
@@ -746,14 +753,26 @@ BOOL isExiting = FALSE;
 - (void)createViews
 {
     // We create the views in code for primarily for ease of upgrades and not requiring an external .xib to be included
-    bool isAtLeastiOS11 = false;
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
+    float safeAreaInsetBottom = 0.0;
     if (@available(iOS 11.0, *)) {
-        isAtLeastiOS11 = true;
+        UIWindow *window = nil;
+        if (@available(iOS 15.0, *)) {
+            window = [[UIApplication sharedApplication].connectedScenes.allObjects filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(id scene, NSDictionary *bindings) {
+                return [scene isKindOfClass:[UIWindowScene class]];
+            }]].firstObject;
+            if (window) {
+                window = ((UIWindowScene *)window).keyWindow;
+            }
+        }
+        if (!window) {
+            window = [UIApplication sharedApplication].windows.firstObject;
+        }
+        if (window) {
+            safeAreaInsetBottom = window.safeAreaInsets.bottom;
+        }
     }
-#endif
-    float safeAreaInsetBottom = isAtLeastiOS11 ? [[[UIApplication sharedApplication] windows] objectAtIndex:0].safeAreaInsets.bottom : 0.0;
     BOOL toolbarIsAtBottom = ![_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
+    UIColor *barColor = _browserOptions.toolbarcolor != nil ? [self colorFromHexString:_browserOptions.toolbarcolor] : DefaultBarColor();
     WKUserContentController* userContentController = [[WKUserContentController alloc] init];
     
     WKWebViewConfiguration* configuration = [[WKWebViewConfiguration alloc] init];
@@ -802,7 +821,12 @@ BOOL isExiting = FALSE;
     
     [self.view addSubview:self.webView];
     [self.view sendSubviewToBack:self.webView];
-    
+
+    UIView *webViewTopBorder = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.webView.bounds.size.width, 1)];
+    webViewTopBorder.backgroundColor = BorderColor();
+    webViewTopBorder.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    [self.webView addSubview:webViewTopBorder];
+
     
     self.webView.navigationDelegate = self;
     self.webView.UIDelegate = self.webViewUIDelegate;
@@ -848,18 +872,20 @@ BOOL isExiting = FALSE;
         self.closeButton.tintColor = [self colorFromHexString:_browserOptions.closebuttoncolor];
     }
     self.closeButton.enabled = YES;
-    
+    [self.closeButton setTitleTextAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:CLOSE_BUTTON_FONT_SIZE]} forState:UIControlStateNormal];
+    [self.closeButton setTitleTextAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:CLOSE_BUTTON_FONT_SIZE]} forState:UIControlStateHighlighted];
+
     UIBarButtonItem* flexibleSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
     
     UIBarButtonItem* fixedSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
-    fixedSpaceButton.width = 20;
+    fixedSpaceButton.width = 12;
 
     CGRect bannerFrame = CGRectMake(0.0, 0.0, self.view.bounds.size.width, 0.0);
     self.bannerTextView = [[UITextView alloc] initWithFrame:bannerFrame];
     self.bannerTextView.alpha = 1.000;
     self.bannerTextView.autoresizesSubviews = YES;
     self.bannerTextView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    self.bannerTextView.backgroundColor = _browserOptions.bannercolor != nil ? [self colorFromHexString:_browserOptions.bannercolor] : [self colorFromHexString:@"#CCCCCC"];
+    self.bannerTextView.backgroundColor = _browserOptions.bannercolor != nil ? [self colorFromHexString:_browserOptions.bannercolor] : DefaultBarColor();
     self.bannerTextView.clearsContextBeforeDrawing = YES;
     self.bannerTextView.clipsToBounds = YES;
     self.bannerTextView.contentMode = UIViewContentModeScaleToFill;
@@ -871,7 +897,8 @@ BOOL isExiting = FALSE;
     self.bannerTextView.textAlignment = NSTextAlignmentLeft;
     self.bannerTextView.textColor = _browserOptions.bannertextcolor != nil ? [self colorFromHexString:_browserOptions.bannertextcolor] : [UIColor labelColor];
     // NOTE: Edge format is top, left, bottom, right.
-    self.bannerTextView.textContainerInset = UIEdgeInsetsMake(8, 5, 8, 5);
+    self.bannerTextView.textContainerInset = UIEdgeInsetsMake(8, CONTENT_HORIZONTAL_PADDING, 8, CONTENT_HORIZONTAL_PADDING);
+    self.bannerTextView.textContainer.lineFragmentPadding = 0;
     self.bannerTextView.userInteractionEnabled = YES;
     
     [self.bannerTextView setFont:[UIFont systemFontOfSize:(_browserOptions.bannertextsize != nil ? [_browserOptions.bannertextsize intValue] : 16)]];
@@ -884,39 +911,47 @@ BOOL isExiting = FALSE;
     tap.numberOfTapsRequired = 1; 
     [self.bannerTextView addGestureRecognizer:tap];
 
-    float toolbarHeight = (toolbarIsAtBottom && _browserOptions.pagetitleheader) ? TOOLBAR_HEIGHT + safeAreaInsetBottom : TOOLBAR_HEIGHT;
-    float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - toolbarHeight : 0;
+    float toolbarHeight = TOOLBAR_HEIGHT;
+    float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT - safeAreaInsetBottom : 0;
     CGRect toolbarFrame = CGRectMake(0.0, toolbarY, self.view.bounds.size.width, toolbarHeight);
     
     self.toolbar = [[UIToolbar alloc] initWithFrame:toolbarFrame];
     self.toolbar.alpha = 1.000;
     self.toolbar.autoresizesSubviews = YES;
     self.toolbar.autoresizingMask = toolbarIsAtBottom ? (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin) : UIViewAutoresizingFlexibleWidth;
-    self.toolbar.barStyle = UIBarStyleBlackOpaque;
+    self.toolbar.barStyle = UIBarStyleDefault;
     self.toolbar.clearsContextBeforeDrawing = NO;
-    self.toolbar.clipsToBounds = NO;
+    self.toolbar.clipsToBounds = YES;
     self.toolbar.contentMode = UIViewContentModeScaleToFill;
     self.toolbar.hidden = NO;
     self.toolbar.multipleTouchEnabled = NO;
-    self.toolbar.opaque = NO;
+    self.toolbar.opaque = YES;
     self.toolbar.userInteractionEnabled = YES;
-    if (_browserOptions.toolbarcolor != nil) { // Set toolbar color if user sets it in options
-      self.toolbar.barTintColor = [self colorFromHexString:_browserOptions.toolbarcolor];
+    self.toolbar.translucent = NO;
+    self.toolbar.barTintColor = barColor;
+    self.toolbar.backgroundColor = barColor;
+    // Use UIToolbarAppearance to force opaque and prevent Liquid Glass on iOS 26+
+    UIToolbarAppearance *toolbarAppearance = [[UIToolbarAppearance alloc] init];
+    [toolbarAppearance configureWithOpaqueBackground];
+    toolbarAppearance.backgroundColor = barColor;
+    self.toolbar.standardAppearance = toolbarAppearance;
+    self.toolbar.compactAppearance = toolbarAppearance;
+    if (@available(iOS 15.0, *)) {
+        self.toolbar.scrollEdgeAppearance = toolbarAppearance;
     }
-    if (!_browserOptions.toolbartranslucent) { // Set toolbar translucent to no if user sets it in options
-      self.toolbar.translucent = NO;
+    if (_browserOptions.toolbartranslucent) {
+      self.toolbar.translucent = YES;
     }
-    
-    CGFloat labelInset = 5.0;
-    float locationBarY = toolbarIsAtBottom ? self.view.bounds.size.height - toolbarHeight - LOCATIONBAR_HEIGHT : self.view.bounds.size.height - LOCATIONBAR_HEIGHT;
-    
+    CGFloat labelInset = 0.0;
+    float locationBarY = toolbarIsAtBottom ? toolbarY - LOCATIONBAR_HEIGHT : self.view.bounds.size.height - LOCATIONBAR_HEIGHT;
+
     self.addressLabel = [[UILabel alloc] initWithFrame:CGRectMake(labelInset, locationBarY, self.view.bounds.size.width - labelInset, LOCATIONBAR_HEIGHT)];
     self.addressLabel.adjustsFontSizeToFitWidth = NO;
     self.addressLabel.alpha = 1.000;
     self.addressLabel.autoresizesSubviews = YES;
     self.addressLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin;
     // Don't use transparent url bar - based on https://github.com/apache/cordova-plugin-inappbrowser/issues/870
-    self.addressLabel.backgroundColor = _browserOptions.toolbarcolor != nil ? [self colorFromHexString:_browserOptions.toolbarcolor] : [self colorFromHexString:@"#CCCCCC"];
+    self.addressLabel.backgroundColor = barColor;
     self.addressLabel.baselineAdjustment = UIBaselineAdjustmentAlignCenters;
     self.addressLabel.clearsContextBeforeDrawing = YES;
     self.addressLabel.clipsToBounds = YES;
@@ -925,8 +960,9 @@ BOOL isExiting = FALSE;
     self.addressLabel.hidden = NO;
     self.addressLabel.lineBreakMode = NSLineBreakByTruncatingTail;
     
+    [self.addressLabel setFont:[UIFont systemFontOfSize:ADDRESS_LABEL_FONT_SIZE]];
     if ([self.addressLabel respondsToSelector:NSSelectorFromString(@"setMinimumScaleFactor:")]) {
-        [self.addressLabel setValue:@(10.0/[UIFont labelFontSize]) forKey:@"minimumScaleFactor"];
+        [self.addressLabel setValue:@(10.0/ADDRESS_LABEL_FONT_SIZE) forKey:@"minimumScaleFactor"];
     } else if ([self.addressLabel respondsToSelector:NSSelectorFromString(@"setMinimumFontSize:")]) {
         [self.addressLabel setValue:@(10.0) forKey:@"minimumFontSize"];
     }
@@ -935,9 +971,16 @@ BOOL isExiting = FALSE;
     self.addressLabel.numberOfLines = 1;
     self.addressLabel.opaque = NO;
     self.addressLabel.shadowOffset = CGSizeMake(0.0, -1.0);
-    self.addressLabel.text = NSLocalizedString(@"Loading...", nil);
+    NSMutableParagraphStyle *paragraphStyle = [[NSMutableParagraphStyle alloc] init];
+    paragraphStyle.firstLineHeadIndent = CONTENT_HORIZONTAL_PADDING;
+    paragraphStyle.lineBreakMode = NSLineBreakByTruncatingTail;
+    self.addressLabelAttributes = @{
+        NSFontAttributeName: [UIFont systemFontOfSize:ADDRESS_LABEL_FONT_SIZE],
+        NSParagraphStyleAttributeName: paragraphStyle,
+        NSForegroundColorAttributeName: _browserOptions.navigationbuttoncolor != nil ? [self colorFromHexString:_browserOptions.navigationbuttoncolor] : [UIColor blackColor]
+    };
+    self.addressLabel.attributedText = [[NSAttributedString alloc] initWithString:NSLocalizedString(@"Loading...", nil) attributes:self.addressLabelAttributes];
     self.addressLabel.textAlignment = NSTextAlignmentLeft;
-    self.addressLabel.textColor = _browserOptions.navigationbuttoncolor != nil ? [self colorFromHexString:_browserOptions.navigationbuttoncolor] : [UIColor colorWithWhite:1.000 alpha:1.000];
     self.addressLabel.userInteractionEnabled = NO;
 
     self.pageTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(self.navigationItem.titleView.frame.origin.x, self.navigationItem.titleView.frame.origin.y, self.navigationItem.titleView.frame.size.width, self.navigationItem.titleView.frame.size.height)];
@@ -951,15 +994,20 @@ BOOL isExiting = FALSE;
     UIButton *reloadUIButton = [self createNavButton:@"arrow.clockwise" fallbackImageName:@"reload" titleFallback:@"↻" action:@selector(doReload:) withDescription:@"reload button"];
     self.reloadButton = [[UIBarButtonItem alloc] initWithCustomView:reloadUIButton];
 
+    // Opt out of Liquid Glass pill grouping on iOS 26+
+    if (@available(iOS 26.0, *)) {
+        self.closeButton.hidesSharedBackground = YES;
+        self.backButton.hidesSharedBackground = YES;
+        self.forwardButton.hidesSharedBackground = YES;
+        self.reloadButton.hidesSharedBackground = YES;
+    }
+
     if (_browserOptions.pagetitleheader) {
         if (_browserOptions.hidenavigationbuttons) {
             [self.toolbar setItems:@[flexibleSpaceButton, self.reloadButton]];
         } else {
             [self.toolbar setItems:@[self.backButton, fixedSpaceButton, self.forwardButton, flexibleSpaceButton, self.reloadButton]];
         }
-        UIView *lineView = [[UIView alloc] initWithFrame:CGRectMake(0, [_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop] ? self.toolbar.frame.size.height - 1 : 0, self.view.bounds.size.width, 1)];
-        lineView.backgroundColor = [self darkerColorForColor:self.toolbar.barTintColor];
-        [self.toolbar addSubview:lineView];
     } else {
         // Filter out Navigation Buttons if user requests so
         if (_browserOptions.hidenavigationbuttons) {
@@ -974,9 +1022,36 @@ BOOL isExiting = FALSE;
             [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton, self.backButton, fixedSpaceButton, self.forwardButton]];
         }
     }
-    
-    self.view.backgroundColor = [UIColor clearColor];
+
+    UIColor *borderColor = BorderColor();
+    CGFloat viewWidth = self.view.bounds.size.width;
+
+    // Address label borders
+    UIView *addressTopBorder = [[UIView alloc] initWithFrame:CGRectMake(0, 0, viewWidth, 1)];
+    addressTopBorder.backgroundColor = borderColor;
+    addressTopBorder.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    [self.addressLabel addSubview:addressTopBorder];
+
+    UIView *addressBottomBorder = [[UIView alloc] initWithFrame:CGRectMake(0, self.addressLabel.frame.size.height - 1, viewWidth, 1)];
+    addressBottomBorder.backgroundColor = borderColor;
+    addressBottomBorder.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
+    [self.addressLabel addSubview:addressBottomBorder];
+
+    self.view.backgroundColor = barColor;
+    float statusBarHeight = [self getStatusBarOffset];
+    if (statusBarHeight > 0) {
+        UIView *topSafeAreaFill = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, statusBarHeight)];
+        topSafeAreaFill.backgroundColor = barColor;
+        topSafeAreaFill.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+        [self.view addSubview:topSafeAreaFill];
+    }
     [self.view addSubview:self.bannerTextView];
+    if (toolbarIsAtBottom && safeAreaInsetBottom > 0) {
+        UIView *safeAreaFill = [[UIView alloc] initWithFrame:CGRectMake(0, self.view.bounds.size.height - safeAreaInsetBottom, self.view.bounds.size.width, safeAreaInsetBottom)];
+        safeAreaFill.backgroundColor = barColor;
+        safeAreaFill.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
+        [self.view addSubview:safeAreaFill];
+    }
     [self.view addSubview:self.toolbar];
     [self.view addSubview:self.addressLabel];
     [self.view addSubview:self.spinner];
@@ -1001,8 +1076,13 @@ BOOL isExiting = FALSE;
     self.closeButton = title != nil ? [[UIBarButtonItem alloc] initWithTitle:title style:UIBarButtonItemStyleBordered target:self action:@selector(close)] : [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close)];
     self.closeButton.enabled = YES;
     // If color on closebutton is requested then initialize with that that color, otherwise use initialize with default
-    self.closeButton.tintColor = colorString != nil ? [self colorFromHexString:colorString] : [UIColor colorWithRed:60.0 / 255.0 green:136.0 / 255.0 blue:230.0 / 255.0 alpha:1];
-    
+    self.closeButton.tintColor = colorString != nil ? [self colorFromHexString:colorString] : [UIColor blackColor];
+    [self.closeButton setTitleTextAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:CLOSE_BUTTON_FONT_SIZE]} forState:UIControlStateNormal];
+    [self.closeButton setTitleTextAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:CLOSE_BUTTON_FONT_SIZE]} forState:UIControlStateHighlighted];
+    if (@available(iOS 26.0, *)) {
+        self.closeButton.hidesSharedBackground = YES;
+    }
+
     // Replace the old close button with new title if it's in the toolbar
     if (!_browserOptions.pagetitleheader) {
         NSMutableArray* items = [self.toolbar.items mutableCopy];
@@ -1043,22 +1123,20 @@ BOOL isExiting = FALSE;
         // Get the navigation bar
         UINavigationBar *navBar = self.navigationController.navigationBar;
 
-        // Style the navigation bar
+        // Style the navigation bar with opaque background to prevent Liquid Glass effects
         UINavigationBarAppearance *appearance = [UINavigationBarAppearance new];
-        if (_browserOptions.toolbarcolor != nil) { // Set toolbar color if user sets it in options
-            appearance.backgroundColor = [self colorFromHexString:_browserOptions.toolbarcolor];
-        } else {
-            [appearance configureWithOpaqueBackground];
-        }
+        [appearance configureWithOpaqueBackground];
+        appearance.backgroundColor = _browserOptions.toolbarcolor != nil ? [self colorFromHexString:_browserOptions.toolbarcolor] : DefaultBarColor();
         navBar.standardAppearance = appearance;
         navBar.scrollEdgeAppearance = appearance;
+        navBar.compactAppearance = appearance;
 
         // Custom view for the title
         UIStackView *customTitleView = [[UIStackView alloc] init];
         customTitleView.axis = UILayoutConstraintAxisHorizontal;
         customTitleView.distribution = UIStackViewDistributionEqualSpacing;
         customTitleView.alignment = UIStackViewAlignmentCenter;
-        UIColor *toolbarTextColorOrDefault = _browserOptions.toolbartextcolor != nil ? [self colorFromHexString:_browserOptions.toolbartextcolor] : [UIColor labelColor];
+        UIColor *toolbarTextColorOrDefault = _browserOptions.toolbartextcolor != nil ? [self colorFromHexString:_browserOptions.toolbartextcolor] : [UIColor blackColor];
         UIImageView *lockIconView = [[UIImageView alloc] initWithImage:[self createSystemSymbolImage:@"lock.fill" fallbackImageName:@"lock" pointSize:12 withTintColor:toolbarTextColorOrDefault]];
         self.pageTitleLabel.text = NSLocalizedString(@"Loading...", nil);
         [self.pageTitleLabel setFont:[UIFont boldSystemFontOfSize:16]];
@@ -1124,13 +1202,16 @@ BOOL isExiting = FALSE;
 }
 
 - (void)showBanner:(BOOL)show
-{   
+{
+    BOOL hasText = self.bannerTextView.text.length > 0;
+    BOOL shouldShow = show && hasText;
+
     // prevent double show/hide
-    if (show == !(self.bannerTextView.hidden)) {
+    if (shouldShow == !(self.bannerTextView.hidden)) {
         return;
     }
 
-    if (show) {
+    if (shouldShow) {
         self.bannerTextView.hidden = NO;
         // Shorten the webView by the height of the banner
         CGRect webViewBounds = self.webView.bounds;
@@ -1145,6 +1226,7 @@ BOOL isExiting = FALSE;
 - (void)setBannerTextViewText:(NSString*)message
 {
     self.bannerTextView.text = message;
+    [self showBanner:_browserOptions.banner];
     [self rePositionViews];
 }
 
@@ -1258,7 +1340,7 @@ BOOL isExiting = FALSE;
 
     if (_browserOptions.pagetitleheader) webViewBounds.size.height -= pageTitleHeaderHeight;
 
-    if (_browserOptions.banner) {
+    if (!self.bannerTextView.hidden) {
         CGSize sizeThatFitsTextView = [self.bannerTextView sizeThatFits:CGSizeMake(self.bannerTextView.frame.size.width, CGFLOAT_MAX)];
         self.bannerTextView.frame = CGRectMake(self.bannerTextView.frame.origin.x, pageTitleHeaderHeight + statusBarHeight, self.bannerTextView.frame.size.width, sizeThatFitsTextView.height);
 
@@ -1268,15 +1350,24 @@ BOOL isExiting = FALSE;
 
     if (_browserOptions.location) webViewBounds.size.height -= self.addressLabel.frame.size.height;
 
+    BOOL toolbarIsAtBottom = ![_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
+    float safeAreaBottom = 0;
+    if (@available(iOS 11.0, *)) {
+        safeAreaBottom = self.view.safeAreaInsets.bottom;
+    }
+
     if (_browserOptions.toolbar) {
-        if ([_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop]) {
-            // if we have to display the toolbar on top of the web view, we need to account for its height
+        if (!toolbarIsAtBottom) {
             webViewBounds.origin.y += TOOLBAR_HEIGHT;
             self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, _browserOptions ? self.bannerTextView.frame.size.height + pageTitleHeaderHeight + statusBarHeight : statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
         }
         webViewBounds.size.height -= self.toolbar.frame.size.height;
     }
-    
+
+    if (toolbarIsAtBottom) {
+        webViewBounds.size.height -= safeAreaBottom;
+    }
+
     self.webView.frame = webViewBounds;
 }
 
@@ -1309,7 +1400,7 @@ BOOL isExiting = FALSE;
     
     // loading url, start spinner, update back/forward
     
-    self.addressLabel.text = NSLocalizedString(@"Loading...", nil);
+    self.addressLabel.attributedText = [[NSAttributedString alloc] initWithString:NSLocalizedString(@"Loading...", nil) attributes:self.addressLabelAttributes];
     self.backButton.enabled = theWebView.canGoBack;
     self.forwardButton.enabled = theWebView.canGoForward;
     
@@ -1338,7 +1429,8 @@ BOOL isExiting = FALSE;
 - (void)webView:(WKWebView *)theWebView didFinishNavigation:(WKNavigation *)navigation
 {
     // update url, stop spinner, update back/forward
-    self.addressLabel.text = [self.currentURL absoluteString];
+    NSString *urlString = [self.currentURL absoluteString] ?: @"";
+    self.addressLabel.attributedText = [[NSAttributedString alloc] initWithString:urlString attributes:self.addressLabelAttributes];
     if (_browserOptions.pagetitleheader) {
         self.pageTitleLabel.text = theWebView.title;
     }
@@ -1359,7 +1451,7 @@ BOOL isExiting = FALSE;
     self.forwardButton.enabled = theWebView.canGoForward;
     [self.spinner stopAnimating];
     
-    self.addressLabel.text = NSLocalizedString(@"Load Error", nil);
+    self.addressLabel.attributedText = [[NSAttributedString alloc] initWithString:NSLocalizedString(@"Load Error", nil) attributes:self.addressLabelAttributes];
     
     [self.navigationDelegate webView:theWebView didFailNavigation:error];
 }
@@ -1446,14 +1538,15 @@ BOOL isExiting = FALSE;
 - (UIButton*) createNavButton:(NSString*)systemSymbolName fallbackImageName:(NSString*)fallbackImageName titleFallback:(NSString*)titleFallback action:(SEL)action withDescription:(NSString*)description
 {
     UIButton* result = [UIButton buttonWithType:UIButtonTypeCustom];
-    result.bounds = CGRectMake(0, 0, 30, 30);
+    result.bounds = CGRectMake(0, 0, 24, 24);
+    result.contentEdgeInsets = UIEdgeInsetsZero;
 
     // At least iOS 13.0 which means we can use system symbol
-    UIColor *color = _browserOptions.navigationbuttoncolor != nil ? [self colorFromHexString:_browserOptions.navigationbuttoncolor] : [UIColor labelColor];
-    UIImage *buttonImage = [self createSystemSymbolImage:systemSymbolName fallbackImageName:fallbackImageName pointSize:24 withTintColor:color];
+    UIColor *color = _browserOptions.navigationbuttoncolor != nil ? [self colorFromHexString:_browserOptions.navigationbuttoncolor] : [UIColor blackColor];
+    UIImage *buttonImage = [self createSystemSymbolImage:systemSymbolName fallbackImageName:fallbackImageName pointSize:20 withTintColor:color];
 
     NSString *fallbackImageNamePressed = [fallbackImageName stringByAppendingString:@"_light"];
-    UIImage *buttonImagePressed = [self createSystemSymbolImage:systemSymbolName fallbackImageName:fallbackImageNamePressed pointSize:24 withTintColor:[color colorWithAlphaComponent:0.9]];
+    UIImage *buttonImagePressed = [self createSystemSymbolImage:systemSymbolName fallbackImageName:fallbackImageNamePressed pointSize:20 withTintColor:[color colorWithAlphaComponent:0.9]];
 
     if ((buttonImage) && (buttonImagePressed)) {
         [result setImage:buttonImage forState:UIControlStateNormal];
