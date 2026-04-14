@@ -867,10 +867,14 @@ BOOL isExiting = FALSE;
     self.spinner.userInteractionEnabled = NO;
     [self.spinner stopAnimating];
     
-    self.closeButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close)];
-    if (_browserOptions.closebuttoncolor != nil) {
-        self.closeButton.tintColor = [self colorFromHexString:_browserOptions.closebuttoncolor];
-    }
+    self.closeButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"xmark"]
+                                                       style:UIBarButtonItemStylePlain
+                                                      target:self
+                                                      action:@selector(close)];
+    UIColor *navColor = _browserOptions.navigationbuttoncolor != nil ? [self colorFromHexString:_browserOptions.navigationbuttoncolor] : [UIColor blackColor];
+    self.closeButton.tintColor = _browserOptions.closebuttoncolor != nil
+        ? [self colorFromHexString:_browserOptions.closebuttoncolor]
+        : navColor;
     self.closeButton.enabled = YES;
     [self.closeButton setTitleTextAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:CLOSE_BUTTON_FONT_SIZE]} forState:UIControlStateNormal];
     [self.closeButton setTitleTextAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:CLOSE_BUTTON_FONT_SIZE]} forState:UIControlStateHighlighted];
@@ -1072,11 +1076,17 @@ BOOL isExiting = FALSE;
     // the advantage of using UIBarButtonSystemItemDone is the system will localize it for you automatically
     // but, if you want to set this yourself, knock yourself out (we can't set the title for a system Done button, so we have to create a new one)
     self.closeButton = nil;
-    // Initialize with title if title is set, otherwise the title will be 'Done' localized
-    self.closeButton = title != nil ? [[UIBarButtonItem alloc] initWithTitle:title style:UIBarButtonItemStyleBordered target:self action:@selector(close)] : [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close)];
+    // Initialize with title if title is set, otherwise the title will be an X button
+    self.closeButton = title != nil
+        ? [[UIBarButtonItem alloc] initWithTitle:title style:UIBarButtonItemStyleBordered target:self action:@selector(close)]
+        : [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"xmark"]
+                                           style:UIBarButtonItemStylePlain
+                                          target:self
+                                          action:@selector(close)];
     self.closeButton.enabled = YES;
     // If color on closebutton is requested then initialize with that that color, otherwise use initialize with default
-    self.closeButton.tintColor = colorString != nil ? [self colorFromHexString:colorString] : [UIColor blackColor];
+    UIColor *navFallback = _browserOptions.navigationbuttoncolor != nil ? [self colorFromHexString:_browserOptions.navigationbuttoncolor] : [UIColor blackColor];
+    self.closeButton.tintColor = colorString != nil ? [self colorFromHexString:colorString] : navFallback;
     [self.closeButton setTitleTextAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:CLOSE_BUTTON_FONT_SIZE]} forState:UIControlStateNormal];
     [self.closeButton setTitleTextAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:CLOSE_BUTTON_FONT_SIZE]} forState:UIControlStateHighlighted];
     if (@available(iOS 26.0, *)) {
